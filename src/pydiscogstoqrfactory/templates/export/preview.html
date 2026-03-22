@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}CSV Preview{% endblock %}
+
+{% block content %}
+<h1>CSV Preview</h1>
+<p>{{ rows | length }} release(s) selected</p>
+
+<div class="table-scroll">
+    <table class="csv-table">
+        <thead>
+            <tr>
+                {% for col in header %}
+                    <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                {% for col in header %}
+                    <td>{{ row[col] }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="form-actions">
+    <form method="post" action="{{ url_for('export.edit') }}" class="inline-form">
+        <button type="submit" class="btn btn-sm">Edit Before Download</button>
+    </form>
+
+    <form method="post" action="{{ url_for('export.download') }}" class="inline-form">
+        <button type="submit" class="btn btn-primary">Download CSV</button>
+    </form>
+
+    <form method="post" action="{{ url_for('export.mark_processed') }}" class="inline-form">
+        <input type="hidden" name="releases_data" value='{{ releases | tojson }}'>
+        <button type="submit" class="btn btn-sm btn-success">Mark as Processed &amp; Downloaded</button>
+    </form>
+</div>
+
+<p><a href="{{ url_for('collection.landing') }}">&larr; Back to Home</a></p>
+{% endblock %}

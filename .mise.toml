@@ -1,0 +1,45 @@
+[tools]
+python = "3.12"
+uv = "latest"
+
+[env]
+_.file = ".env"
+PYTHONPATH = "src"
+FLASK_APP = "pydiscogstoqrfactory"
+FLASK_ENV = "development"
+FLASK_DEBUG = "1"
+FLASK_RUN_PORT = "5001"
+
+[tasks.install]
+description = "Install dependencies"
+alias = "i"
+run = "uv sync"
+
+[tasks.info]
+description = "Print project information"
+run = '''
+echo "Project: $PROJECT_NAME"
+echo "Virtual Environment: $VIRTUAL_ENV"
+'''
+
+[tasks.flask_debug]
+description = "runs Flask app with debug turned on"
+run = "PYTHONPATH=src uv run flask run --debug"
+
+[tasks.run]
+description = "Run Flask app"
+alias = "r"
+run = "PYTHONPATH=src uv run flask run"
+
+[tasks.test]
+description = "Run tests"
+alias = "t"
+run = "PYTHONPATH=src uv run --all-extras pytest"
+
+[tasks.test-cov]
+description = "Run tests with coverage"
+run = "PYTHONPATH=src uv run --all-extras pytest --cov=pydiscogstoqrfactory"
+
+[settings]
+python.uv_venv_auto = true
+pipx.uvx = true
