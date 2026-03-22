@@ -101,6 +101,39 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Unmark Processed button
+    var unmarkBtn = document.getElementById('unmark-processed-btn');
+    if (unmarkBtn) {
+        unmarkBtn.addEventListener('click', function () {
+            var selected = collectSelectedReleases();
+            // Only include releases that are actually processed
+            var processedSelected = [];
+            form.querySelectorAll('.release-check:checked').forEach(function (cb) {
+                if (cb.dataset.processed === 'true') {
+                    try {
+                        processedSelected.push(JSON.parse(cb.dataset.release));
+                    } catch (e) { }
+                }
+            });
+            if (processedSelected.length === 0) {
+                showWarning('Please select at least one processed release to unmark.');
+                return;
+            }
+            hideWarning();
+            // Submit to unmark-processed endpoint via a hidden form
+            var hiddenForm = document.createElement('form');
+            hiddenForm.method = 'POST';
+            hiddenForm.action = unmarkBtn.dataset.action;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'releases_data';
+            input.value = JSON.stringify(processedSelected);
+            hiddenForm.appendChild(input);
+            document.body.appendChild(hiddenForm);
+            hiddenForm.submit();
+        });
+    }
+
     // Form submission: collect selected releases into hidden field
     form.addEventListener('submit', function (e) {
         var selected = collectSelectedReleases();

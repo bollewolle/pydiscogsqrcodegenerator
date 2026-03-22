@@ -133,6 +133,34 @@ def mark_processed():
     return redirect(url_for("collection.landing"))
 
 
+@export_bp.route("/unmark-processed", methods=["POST"])
+def unmark_processed():
+    """Remove the processed status from selected releases."""
+    releases_json = request.form.get("releases_data")
+    if not releases_json:
+        flash("No releases selected.", "warning")
+        return redirect(request.referrer or url_for("collection.landing"))
+
+    try:
+        releases = json.loads(releases_json)
+    except (json.JSONDecodeError, TypeError):
+        flash("Invalid release data.", "error")
+        return redirect(request.referrer or url_for("collection.landing"))
+
+    release_ids = [r["id"] for r in releases if "id" in r]
+    if not release_ids:
+        flash("No valid releases to unmark.", "warning")
+        return redirect(request.referrer or url_for("collection.landing"))
+
+    count = ProcessedRelease.query.filter(
+        ProcessedRelease.discogs_release_id.in_(release_ids)
+    ).delete(synchronize_session="fetch")
+    db.session.commit()
+
+    flash(f"Removed processed status from {count} release(s).", "success")
+    return redirect(request.referrer or url_for("collection.landing"))
+
+
 @export_bp.route("/clear-session", methods=["POST"])
 def clear_session():
     """Clear session data (selection, preview) but keep auth."""

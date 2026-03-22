@@ -86,6 +86,43 @@ class TestMarkProcessed:
         assert b"Marked 0 release(s) as processed" in response.data
 
 
+class TestUnmarkProcessed:
+    def test_unmark_processed(self, client, db, sample_releases):
+        # First mark them as processed
+        client.post(
+            "/export/mark-processed",
+            data={"releases_data": json.dumps(sample_releases)},
+        )
+        assert ProcessedRelease.query.count() == 3
+
+        # Unmark two of them
+        to_unmark = sample_releases[:2]
+        response = client.post(
+            "/export/unmark-processed",
+            data={"releases_data": json.dumps(to_unmark)},
+            follow_redirects=True,
+        )
+        assert b"Removed processed status from 2 release(s)" in response.data
+        assert ProcessedRelease.query.count() == 1
+
+    def test_unmark_processed_none_found(self, client, db, sample_releases):
+        # Try to unmark releases that are not processed
+        response = client.post(
+            "/export/unmark-processed",
+            data={"releases_data": json.dumps(sample_releases)},
+            follow_redirects=True,
+        )
+        assert b"Removed processed status from 0 release(s)" in response.data
+
+    def test_unmark_processed_no_data(self, client):
+        response = client.post(
+            "/export/unmark-processed",
+            data={},
+            follow_redirects=True,
+        )
+        assert b"No releases selected" in response.data
+
+
 class TestClearSession:
     def test_clear_session_preserves_auth(self, client):
         with client.session_transaction() as sess:
