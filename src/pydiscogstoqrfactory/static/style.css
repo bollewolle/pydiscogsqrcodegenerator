@@ -155,7 +155,7 @@ a:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
-    max-width: 700px;
+    max-width: 960px;
     margin: 0 auto;
 }
 
@@ -215,6 +215,12 @@ a:hover {
 .folder-card h3 {
     margin-bottom: 0.5rem;
     font-size: 1rem;
+}
+
+.format-descriptions, .format-text {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
 }
 
 /* Badges */

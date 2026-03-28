@@ -149,6 +149,113 @@ def latest():
     )
 
 
+@collection_bp.route("/collection/formats")
+def formats():
+    """List unique format names in the user's collection."""
+    service = get_authenticated_service()
+    if not service:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("auth.login"))
+
+    username = session["username"]
+    try:
+        format_list = service.get_collection_formats(username)
+    except Exception as e:
+        flash(f"Failed to retrieve formats: {e}", "error")
+        return redirect(url_for("collection.landing"))
+
+    return render_template("collection/formats.html", formats=format_list)
+
+
+@collection_bp.route("/collection/formats/sizes")
+def format_sizes():
+    """List sizes for a specific format, or redirect to releases if no sizes."""
+    service = get_authenticated_service()
+    if not service:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("auth.login"))
+
+    format_name = request.args.get("name", "")
+    if not format_name:
+        flash("No format specified.", "warning")
+        return redirect(url_for("collection.formats"))
+
+    username = session["username"]
+    try:
+        sizes = service.get_format_sizes(username, format_name)
+    except Exception as e:
+        flash(f"Failed to retrieve sizes: {e}", "error")
+        return redirect(url_for("collection.formats"))
+
+    if not sizes:
+        return redirect(url_for("collection.format_releases", name=format_name))
+
+    return render_template(
+        "collection/format_sizes.html",
+        format_name=format_name,
+        sizes=sizes,
+    )
+
+
+@collection_bp.route("/collection/formats/releases")
+def format_releases():
+    """Browse releases matching a specific format, optional size, and description filters."""
+    service = get_authenticated_service()
+    if not service:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("auth.login"))
+
+    username = session["username"]
+    format_name = request.args.get("name", "")
+    size = request.args.get("size", "")
+    active_filters = request.args.getlist("desc")
+    sort = request.args.get("sort", "artist")
+    order = request.args.get("order", "asc")
+    hide_processed = request.args.get("hide_processed", "") == "1"
+
+    if not format_name:
+        flash("No format specified.", "warning")
+        return redirect(url_for("collection.formats"))
+
+    try:
+        releases, available_descriptions = service.get_releases_by_format(
+            username, format_name, size, active_filters or None
+        )
+    except Exception as e:
+        flash(f"Failed to retrieve releases: {e}", "error")
+        return redirect(url_for("collection.formats"))
+
+    releases = _sort_releases(releases, sort, order)
+
+    processed_ids = _get_processed_ids()
+
+    if hide_processed:
+        releases = [r for r in releases if r["id"] not in processed_ids]
+
+    letters = sorted({r["artist"][0].upper() for r in releases if r["artist"]})
+
+    # Build a display label
+    label_parts = [format_name]
+    if size:
+        label_parts.append(size)
+    format_label = " - ".join(label_parts)
+
+    return render_template(
+        "collection/format_releases.html",
+        releases=releases,
+        format_name=format_name,
+        format_label=format_label,
+        size=size,
+        available_descriptions=available_descriptions,
+        active_filters=active_filters,
+        sort=sort,
+        order=order,
+        letters=letters,
+        processed_ids=processed_ids,
+        hide_processed=hide_processed,
+    )
+
+
 def _get_processed_ids() -> set[int]:
     """Get set of already-processed release IDs."""
     processed = ProcessedRelease.query.with_entities(

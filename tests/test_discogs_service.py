@@ -63,6 +63,256 @@ class TestNormalizeRelease:
         assert result["date_added"] == "2025-01-15T10:00:00-08:00"
 
 
+class TestIsSize:
+    def test_twelve_inch(self):
+        assert DiscogsService._is_size('12"') is True
+
+    def test_seven_inch(self):
+        assert DiscogsService._is_size('7"') is True
+
+    def test_ten_inch(self):
+        assert DiscogsService._is_size('10"') is True
+
+    def test_not_size_lp(self):
+        assert DiscogsService._is_size("LP") is False
+
+    def test_not_size_album(self):
+        assert DiscogsService._is_size("Album") is False
+
+    def test_not_size_empty(self):
+        assert DiscogsService._is_size("") is False
+
+
+class TestGetCollectionFormats:
+    def setup_method(self):
+        self.service = DiscogsService("key", "secret", "agent/1.0")
+
+    def _make_item(self, formats):
+        item = MagicMock()
+        release = MagicMock()
+        release.formats = formats
+        item.release = release
+        return item
+
+    def test_groups_by_format_name(self):
+        items = [
+            self._make_item([{"name": "Vinyl", "descriptions": ["LP", "Album", '12"'], "text": ""}]),
+            self._make_item([{"name": "Vinyl", "descriptions": ['7"', "Single"], "text": ""}]),
+            self._make_item([{"name": "CD", "descriptions": ["Album"], "text": ""}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            result = self.service.get_collection_formats("testuser")
+
+        assert len(result) == 2
+        assert result[0]["name"] == "Vinyl"
+        assert result[0]["count"] == 2
+        assert result[0]["has_sizes"] is True
+        assert result[1]["name"] == "CD"
+        assert result[1]["count"] == 1
+        assert result[1]["has_sizes"] is False
+
+    def test_handles_no_formats(self):
+        items = [self._make_item(None)]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            result = self.service.get_collection_formats("testuser")
+
+        assert result == []
+
+
+class TestGetFormatSizes:
+    def setup_method(self):
+        self.service = DiscogsService("key", "secret", "agent/1.0")
+
+    def _make_item(self, formats):
+        item = MagicMock()
+        release = MagicMock()
+        release.formats = formats
+        item.release = release
+        return item
+
+    def test_extracts_sizes(self):
+        items = [
+            self._make_item([{"name": "Vinyl", "descriptions": ['12"', "LP", "Album"]}]),
+            self._make_item([{"name": "Vinyl", "descriptions": ['12"', "LP"]}]),
+            self._make_item([{"name": "Vinyl", "descriptions": ['7"', "Single"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            result = self.service.get_format_sizes("testuser", "Vinyl")
+
+        assert len(result) == 2
+        assert result[0]["size"] == '12"'
+        assert result[0]["count"] == 2
+        assert result[1]["size"] == '7"'
+        assert result[1]["count"] == 1
+
+    def test_includes_unknown_size(self):
+        items = [
+            self._make_item([{"name": "Vinyl", "descriptions": ['12"', "LP"]}]),
+            self._make_item([{"name": "Vinyl", "descriptions": ["LP", "Album"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            result = self.service.get_format_sizes("testuser", "Vinyl")
+
+        assert len(result) == 2
+        assert result[0]["size"] == '12"'
+        assert result[0]["count"] == 1
+        assert result[1]["size"] == "Unknown"
+        assert result[1]["count"] == 1
+
+    def test_no_sizes_for_cd(self):
+        items = [
+            self._make_item([{"name": "CD", "descriptions": ["Album"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            result = self.service.get_format_sizes("testuser", "CD")
+
+        assert result == []
+
+
+class TestGetReleasesByFormat:
+    def setup_method(self):
+        self.service = DiscogsService("key", "secret", "agent/1.0")
+
+    def _make_item(self, release_id, formats, artist_name="Artist"):
+        item = MagicMock()
+        release = MagicMock()
+        release.id = release_id
+        release.title = f"Release {release_id}"
+        release.year = 2020
+        release.formats = formats
+        artist = MagicMock()
+        artist.name = artist_name
+        release.artists = [artist]
+        item.release = release
+        item.date_added = ""
+        folder = MagicMock()
+        folder.name = "All"
+        item.folder = folder
+        return item
+
+    def test_filters_by_format_name(self):
+        items = [
+            self._make_item(1, [{"name": "Vinyl", "descriptions": ['12"', "LP", "Album"]}]),
+            self._make_item(2, [{"name": "CD", "descriptions": ["Album"]}]),
+            self._make_item(3, [{"name": "Vinyl", "descriptions": ['7"', "Single"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            releases, descs = self.service.get_releases_by_format("testuser", "Vinyl")
+
+        assert len(releases) == 2
+        assert releases[0]["id"] == 1
+        assert releases[1]["id"] == 3
+        assert "LP" in descs
+        assert "Album" in descs
+        assert "Single" in descs
+
+    def test_filters_by_size(self):
+        items = [
+            self._make_item(1, [{"name": "Vinyl", "descriptions": ['12"', "LP"]}]),
+            self._make_item(2, [{"name": "Vinyl", "descriptions": ['7"', "Single"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            releases, descs = self.service.get_releases_by_format(
+                "testuser", "Vinyl", size='7"'
+            )
+
+        assert len(releases) == 1
+        assert releases[0]["id"] == 2
+
+    def test_filters_by_unknown_size(self):
+        items = [
+            self._make_item(1, [{"name": "Vinyl", "descriptions": ['12"', "LP"]}]),
+            self._make_item(2, [{"name": "Vinyl", "descriptions": ["LP", "Album"]}]),
+            self._make_item(3, [{"name": "Vinyl", "descriptions": ["Single"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            releases, descs = self.service.get_releases_by_format(
+                "testuser", "Vinyl", size="Unknown"
+            )
+
+        assert len(releases) == 2
+        assert releases[0]["id"] == 2
+        assert releases[1]["id"] == 3
+
+    def test_filters_by_description(self):
+        items = [
+            self._make_item(1, [{"name": "Vinyl", "descriptions": ['12"', "LP", "Album"]}]),
+            self._make_item(2, [{"name": "Vinyl", "descriptions": ['12"', "EP"]}]),
+            self._make_item(3, [{"name": "Vinyl", "descriptions": ['12"', "LP"]}]),
+        ]
+        user = MagicMock()
+        folder = MagicMock()
+        folder.id = 0
+        folder.releases = items
+        user.collection_folders = [folder]
+
+        with patch.object(self.service, "client") as mock_client:
+            mock_client.user.return_value = user
+            releases, descs = self.service.get_releases_by_format(
+                "testuser", "Vinyl", size='12"', description_filter=["LP"]
+            )
+
+        assert len(releases) == 2
+        assert releases[0]["id"] == 1
+        assert releases[1]["id"] == 3
+
+
 class TestFormatArtists:
     def test_single_artist(self):
         artist = MagicMock()

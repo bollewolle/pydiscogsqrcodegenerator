@@ -98,6 +98,98 @@ class DiscogsService:
 
         return releases
 
+    def get_collection_formats(self, username: str) -> list[dict]:
+        """Get unique format names in the user's collection with counts."""
+        user = self.client.user(username)
+        all_folder = self._find_folder(user, 0)
+
+        format_counts: dict[str, dict] = {}
+        for item in all_folder.releases:
+            formats = getattr(item.release, "formats", None) or []
+            for fmt in formats:
+                name = fmt.get("name", "Unknown")
+                if name not in format_counts:
+                    format_counts[name] = {"name": name, "count": 0, "has_sizes": False}
+                format_counts[name]["count"] += 1
+                descriptions = fmt.get("descriptions", [])
+                if any(self._is_size(d) for d in descriptions):
+                    format_counts[name]["has_sizes"] = True
+
+        return sorted(format_counts.values(), key=lambda f: f["count"], reverse=True)
+
+    def get_format_sizes(self, username: str, format_name: str) -> list[dict]:
+        """Get unique sizes for a format name in the user's collection."""
+        user = self.client.user(username)
+        all_folder = self._find_folder(user, 0)
+
+        size_counts: dict[str, int] = {}
+        unknown_count = 0
+        for item in all_folder.releases:
+            formats = getattr(item.release, "formats", None) or []
+            for fmt in formats:
+                if fmt.get("name") != format_name:
+                    continue
+                sizes_found = [d for d in fmt.get("descriptions", []) if self._is_size(d)]
+                if sizes_found:
+                    for s in sizes_found:
+                        size_counts[s] = size_counts.get(s, 0) + 1
+                else:
+                    unknown_count += 1
+
+        result = sorted(
+            [{"size": s, "count": c} for s, c in size_counts.items()],
+            key=lambda x: x["count"],
+            reverse=True,
+        )
+        if unknown_count and result:
+            result.append({"size": "Unknown", "count": unknown_count})
+        return result
+
+    def get_releases_by_format(
+        self,
+        username: str,
+        format_name: str,
+        size: str = "",
+        description_filter: list[str] | None = None,
+    ) -> tuple[list[dict], list[str]]:
+        """Get releases matching a format name and optional size.
+
+        Returns (releases, available_descriptions) where available_descriptions
+        are the non-size description values that can be used for filtering.
+        """
+        user = self.client.user(username)
+        all_folder = self._find_folder(user, 0)
+
+        filter_set = set(description_filter) if description_filter else set()
+        releases = []
+        all_descriptions: set[str] = set()
+
+        for item in all_folder.releases:
+            formats = getattr(item.release, "formats", None) or []
+            for fmt in formats:
+                if fmt.get("name") != format_name:
+                    continue
+                descriptions = fmt.get("descriptions", [])
+                has_size = any(self._is_size(d) for d in descriptions)
+                if size == "Unknown" and has_size:
+                    continue
+                if size and size != "Unknown" and size not in descriptions:
+                    continue
+                non_size = [d for d in descriptions if not self._is_size(d)]
+                all_descriptions.update(non_size)
+                if filter_set and not filter_set.issubset(set(non_size)):
+                    continue
+                folder_name = self._get_item_folder_name(item)
+                releases.append(self._normalize_release(item, folder_name))
+                break
+
+        return releases, sorted(all_descriptions)
+
+    @staticmethod
+    def _is_size(description: str) -> bool:
+        """Check if a description is a physical size (e.g. '12\"', '7\"')."""
+        return bool(re.match(r'^\d+"$', description))
+
     def _normalize_release(self, item, folder_name: str) -> dict:
         """Normalize a collection item into a flat dict."""
         release = item.release
