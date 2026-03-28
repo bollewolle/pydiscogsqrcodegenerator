@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from pydiscogstoqrfactory.discogs_service import DiscogsService
+from pydiscogstoqrfactory.discogs_service import DiscogsService, _collection_cache
 
 
 class TestNormalizeRelease:
@@ -85,13 +85,22 @@ class TestIsSize:
 
 class TestGetCollectionFormats:
     def setup_method(self):
+        _collection_cache.clear()
         self.service = DiscogsService("key", "secret", "agent/1.0")
 
     def _make_item(self, formats):
         item = MagicMock()
         release = MagicMock()
+        release.id = id(item)
+        release.title = "Test"
+        release.year = 2020
         release.formats = formats
+        artist = MagicMock()
+        artist.name = "Artist"
+        release.artists = [artist]
         item.release = release
+        item.date_added = ""
+        item.folder = None
         return item
 
     def test_groups_by_format_name(self):
@@ -135,13 +144,22 @@ class TestGetCollectionFormats:
 
 class TestGetFormatSizes:
     def setup_method(self):
+        _collection_cache.clear()
         self.service = DiscogsService("key", "secret", "agent/1.0")
 
     def _make_item(self, formats):
         item = MagicMock()
         release = MagicMock()
+        release.id = id(item)
+        release.title = "Test"
+        release.year = 2020
         release.formats = formats
+        artist = MagicMock()
+        artist.name = "Artist"
+        release.artists = [artist]
         item.release = release
+        item.date_added = ""
+        item.folder = None
         return item
 
     def test_extracts_sizes(self):
@@ -206,6 +224,7 @@ class TestGetFormatSizes:
 
 class TestGetReleasesByFormat:
     def setup_method(self):
+        _collection_cache.clear()
         self.service = DiscogsService("key", "secret", "agent/1.0")
 
     def _make_item(self, release_id, formats, artist_name="Artist"):
