@@ -295,6 +295,15 @@ a:hover {
     white-space: pre-line;
 }
 
+.releases-table th, .releases-table td {
+    vertical-align: middle;
+}
+
+.releases-table input[type="checkbox"] {
+    display: block;
+    margin: auto;
+}
+
 .releases-table th, .csv-table th {
     background: #f9fafb;
     font-weight: 600;
