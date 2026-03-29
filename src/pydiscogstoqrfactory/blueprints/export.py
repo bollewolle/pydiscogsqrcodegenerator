@@ -233,8 +233,8 @@ def preview_pdf():
             "id": None, "name": "Default",
             "page_width": 210.0, "page_height": 297.0,
             "sticker_width": 50.0, "sticker_height": 50.0,
-            "margin_top": 10.0, "margin_left": 10.0,
-            "spacing_x": 5.0, "spacing_y": 5.0,
+            "margin_top": 7.8, "margin_left": 15.0,
+            "spacing_x": 15.0, "spacing_y": 7.8,
             "cols": 3, "rows": 5, "stickers_per_page": 15,
         }
 
@@ -298,15 +298,15 @@ def generate_pdf():
             layout = {
             "page_width": 210.0, "page_height": 297.0,
             "sticker_width": 50.0, "sticker_height": 50.0,
-            "margin_top": 10.0, "margin_left": 10.0,
-            "spacing_x": 5.0, "spacing_y": 5.0,
+            "margin_top": 7.8, "margin_left": 15.0,
+            "spacing_x": 15.0, "spacing_y": 7.8,
         }
     else:
         layout = {
             "page_width": 210.0, "page_height": 297.0,
             "sticker_width": 50.0, "sticker_height": 50.0,
-            "margin_top": 10.0, "margin_left": 10.0,
-            "spacing_x": 5.0, "spacing_y": 5.0,
+            "margin_top": 7.8, "margin_left": 15.0,
+            "spacing_x": 15.0, "spacing_y": 7.8,
         }
 
     username = session.get("username", "")

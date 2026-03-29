@@ -16,19 +16,45 @@ settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
 DEFAULT_BOTTOM_TEXT = "{artist} \u2013 {title} [{year}]\n{discogs_folder}"
 
+STANDARD_LAYOUTS = {
+    "Default A4": {
+        "page_width": 210.0, "page_height": 297.0,
+        "sticker_width": 50.0, "sticker_height": 50.0,
+        "margin_top": 7.8, "margin_left": 15.0,
+        "spacing_x": 15.0, "spacing_y": 7.8,
+    },
+    "Avery L7120-25": {
+        "page_width": 210.0, "page_height": 297.0,
+        "sticker_width": 35.0, "sticker_height": 35.0,
+        "margin_top": 17.6, "margin_left": 11.6,
+        "spacing_x": 2.5, "spacing_y": 2.5,
+    },
+    "Avery L7121-25": {
+        "page_width": 210.0, "page_height": 297.0,
+        "sticker_width": 45.0, "sticker_height": 45.0,
+        "margin_top": 26.0, "margin_left": 7.5,
+        "spacing_x": 5.0, "spacing_y": 5.0,
+    },
+}
 
-def _ensure_default_layout(username: str) -> None:
-    """Create a default sticker layout if the user has none."""
+
+def _ensure_default_layouts(username: str) -> None:
+    """Create standard sticker layouts if the user has none."""
     existing = StickerLayout.query.filter_by(username=username).first()
     if not existing:
-        layout = StickerLayout(username=username, name="Default A4")
-        db.session.add(layout)
+        first_layout = None
+        for name, dims in STANDARD_LAYOUTS.items():
+            layout = StickerLayout(username=username, name=name, **dims)
+            db.session.add(layout)
+            if first_layout is None:
+                first_layout = layout
         db.session.commit()
-        # Set as active
-        settings = UserSettings.query.filter_by(username=username).first()
-        if settings and not settings.active_layout_id:
-            settings.active_layout_id = layout.id
-            db.session.commit()
+        # Set first layout as active
+        if first_layout:
+            settings = UserSettings.query.filter_by(username=username).first()
+            if settings and not settings.active_layout_id:
+                settings.active_layout_id = first_layout.id
+                db.session.commit()
 
 
 @settings_bp.route("/")
@@ -39,7 +65,7 @@ def index():
         flash("Please log in first.", "warning")
         return redirect(url_for("auth.login"))
 
-    _ensure_default_layout(username)
+    _ensure_default_layouts(username)
 
     settings = UserSettings.query.filter_by(username=username).first()
     bottom_text = settings.bottom_text_template if settings else DEFAULT_BOTTOM_TEXT
@@ -53,6 +79,7 @@ def index():
         default_bottom_text=DEFAULT_BOTTOM_TEXT,
         layouts=layouts,
         active_layout_id=active_layout_id,
+        standard_layouts=STANDARD_LAYOUTS,
     )
 
 

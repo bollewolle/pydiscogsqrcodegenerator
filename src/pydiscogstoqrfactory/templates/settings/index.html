@@ -101,6 +101,9 @@
                     <div class="layout-actions">
                         <button type="submit" class="btn btn-sm btn-primary">Update</button>
                 </form>
+                        {% if layout.name in standard_layouts %}
+                        <button type="button" class="btn btn-sm" data-reset-default-layout="{{ layout.name }}">Reset to Default</button>
+                        {% endif %}
                         <form method="post" action="{{ url_for('settings.delete_layout', layout_id=layout.id) }}" class="inline-form">
                             <button type="submit" class="btn btn-sm btn-danger"
                                     onclick="return confirm('Delete this layout?')">Delete</button>
@@ -123,10 +126,10 @@
                         <label>Page H <input type="number" name="page_height" value="297" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
                         <label>Sticker W <input type="number" name="sticker_width" value="50" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
                         <label>Sticker H <input type="number" name="sticker_height" value="50" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
-                        <label>Margin T <input type="number" name="margin_top" value="10" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
-                        <label>Margin L <input type="number" name="margin_left" value="10" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
-                        <label>Space X <input type="number" name="spacing_x" value="5" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
-                        <label>Space Y <input type="number" name="spacing_y" value="5" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
+                        <label>Margin T <input type="number" name="margin_top" value="7.8" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
+                        <label>Margin L <input type="number" name="margin_left" value="15" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
+                        <label>Space X <input type="number" name="spacing_x" value="15" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
+                        <label>Space Y <input type="number" name="spacing_y" value="7.8" step="0.1" class="layout-input layout-input-sm" data-layout-field></label>
                     </div>
                     <div class="layout-actions">
                         <button type="submit" class="btn btn-sm btn-success">Add Layout</button>
@@ -246,6 +249,24 @@
         // Live update on input change
         card.querySelectorAll('[data-layout-field]').forEach(function(input) {
             input.addEventListener('input', function() { renderLayoutThumb(card); });
+        });
+    });
+
+    // Reset standard layouts to app defaults
+    var standardLayouts = {{ standard_layouts | tojson }};
+
+    document.querySelectorAll('[data-reset-default-layout]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var layoutName = btn.getAttribute('data-reset-default-layout');
+            var defaults = standardLayouts[layoutName];
+            if (!defaults) return;
+            var card = btn.closest('[data-layout-card]');
+            if (!card) return;
+            for (var name in defaults) {
+                var input = card.querySelector('input[name="' + name + '"]');
+                if (input) input.value = defaults[name];
+            }
+            renderLayoutThumb(card);
         });
     });
 })();

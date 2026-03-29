@@ -52,10 +52,10 @@ class StickerLayout(db.Model):
     page_height = db.Column(db.Float, nullable=False, default=297.0)  # mm (A4)
     sticker_width = db.Column(db.Float, nullable=False, default=50.0)  # mm
     sticker_height = db.Column(db.Float, nullable=False, default=50.0)  # mm
-    margin_top = db.Column(db.Float, nullable=False, default=10.0)  # mm
-    margin_left = db.Column(db.Float, nullable=False, default=10.0)  # mm
-    spacing_x = db.Column(db.Float, nullable=False, default=5.0)  # mm
-    spacing_y = db.Column(db.Float, nullable=False, default=5.0)  # mm
+    margin_top = db.Column(db.Float, nullable=False, default=7.8)  # mm
+    margin_left = db.Column(db.Float, nullable=False, default=15.0)  # mm
+    spacing_x = db.Column(db.Float, nullable=False, default=15.0)  # mm
+    spacing_y = db.Column(db.Float, nullable=False, default=7.8)  # mm
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
