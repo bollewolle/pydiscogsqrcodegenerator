@@ -139,7 +139,7 @@ services:
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=0
-      - FRONTEND_URL=http://localhost:8721
+      - FRONTEND_URL=http://your-server-ip-or-domain:8721
       - DISCOGS_CONSUMER_KEY=your_consumer_key
       - DISCOGS_CONSUMER_SECRET=your_consumer_secret
       # Optional: add these if you have OAuth tokens
@@ -154,6 +154,8 @@ volumes:
   # ... your other volumes ...
   discogs-qr-data:
 ```
+
+**Important:** `FRONTEND_URL` must match the URL you use to access the app in your browser (e.g. `http://192.168.1.50:8721` or `https://discogs-qr.yourdomain.com`). This is used to build the Discogs OAuth callback URL. If hosting remotely, `localhost` will not work.
 
 Alternatively, instead of inline environment variables, you can use an `env_file` pointing to a `.env` file (see `.env.example` in this repository for the full list of variables).
 
