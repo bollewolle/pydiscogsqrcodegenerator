@@ -75,8 +75,28 @@ def create_app(config_class=None):
             return f"<pre>Unhandled Exception:\n{error}\n\n{tb}</pre>", 500
         return "<h1>Internal Server Error</h1><p>Something went wrong. Check the server logs.</p>", 500
 
-    # Create database tables
+    # Create database tables and migrate schema
     with app.app_context():
         db.create_all()
+        _migrate_schema(db)
 
     return app
+
+
+def _migrate_schema(database):
+    """Add columns that were introduced after initial release."""
+    import sqlalchemy
+
+    migrations = [
+        ("user_settings", "printer_offset_top", "FLOAT NOT NULL DEFAULT 0.0"),
+        ("user_settings", "printer_offset_left", "FLOAT NOT NULL DEFAULT 0.0"),
+    ]
+    for table, column, col_type in migrations:
+        try:
+            database.session.execute(
+                sqlalchemy.text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+            )
+            database.session.commit()
+            logger.info("Added column %s.%s", table, column)
+        except sqlalchemy.exc.OperationalError:
+            database.session.rollback()

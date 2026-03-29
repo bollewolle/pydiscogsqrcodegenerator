@@ -1,5 +1,7 @@
 from flask import (
     Blueprint,
+    Response,
+    current_app,
     flash,
     jsonify,
     redirect,
@@ -11,6 +13,7 @@ from flask import (
 
 from ..extensions import db
 from ..models import StickerLayout, UserSettings
+from ..pdf_service import PDFService
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
@@ -69,6 +72,8 @@ def index():
 
     settings = UserSettings.query.filter_by(username=username).first()
     bottom_text = settings.bottom_text_template if settings else DEFAULT_BOTTOM_TEXT
+    printer_offset_top = settings.printer_offset_top if settings else 0.0
+    printer_offset_left = settings.printer_offset_left if settings else 0.0
 
     layouts = StickerLayout.query.filter_by(username=username).all()
     active_layout_id = settings.active_layout_id if settings else None
@@ -80,6 +85,8 @@ def index():
         layouts=layouts,
         active_layout_id=active_layout_id,
         standard_layouts=STANDARD_LAYOUTS,
+        printer_offset_top=printer_offset_top,
+        printer_offset_left=printer_offset_left,
     )
 
 
@@ -93,10 +100,14 @@ def save():
 
     bottom_text = request.form.get("bottom_text_template", DEFAULT_BOTTOM_TEXT)
     active_layout_id = request.form.get("active_layout_id", type=int)
+    printer_offset_top = request.form.get("printer_offset_top", 0.0, type=float)
+    printer_offset_left = request.form.get("printer_offset_left", 0.0, type=float)
 
     settings = UserSettings.query.filter_by(username=username).first()
     if settings:
         settings.bottom_text_template = bottom_text
+        settings.printer_offset_top = printer_offset_top
+        settings.printer_offset_left = printer_offset_left
         if active_layout_id:
             settings.active_layout_id = active_layout_id
     else:
@@ -104,6 +115,8 @@ def save():
             username=username,
             bottom_text_template=bottom_text,
             active_layout_id=active_layout_id,
+            printer_offset_top=printer_offset_top,
+            printer_offset_left=printer_offset_left,
         )
         db.session.add(settings)
 
@@ -201,3 +214,41 @@ def layout_info(layout_id):
         return jsonify({"error": "Not found"}), 404
 
     return jsonify(layout.to_dict())
+
+
+@settings_bp.route("/test-page", methods=["POST"])
+def test_page():
+    """Generate a test page PDF for the active sticker layout."""
+    username = session.get("username")
+    if not username:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("auth.login"))
+
+    settings = UserSettings.query.filter_by(username=username).first()
+    if not settings or not settings.active_layout_id:
+        flash("No active layout selected. Please select one first.", "warning")
+        return redirect(url_for("settings.index"))
+
+    layout_model = db.session.get(StickerLayout, settings.active_layout_id)
+    if not layout_model:
+        flash("Active layout not found.", "error")
+        return redirect(url_for("settings.index"))
+
+    layout = layout_model.to_dict()
+    pdf_service = PDFService(
+        current_app.config["LOGO_PATH"],
+        current_app.config["CSV_TEMPLATE_PATH"],
+    )
+    pdf_bytes = pdf_service.generate_test_page(
+        layout,
+        printer_offset_top=settings.printer_offset_top,
+        printer_offset_left=settings.printer_offset_left,
+    )
+
+    return Response(
+        bytes(pdf_bytes),
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="test_page_{layout_model.name}.pdf"'
+        },
+    )

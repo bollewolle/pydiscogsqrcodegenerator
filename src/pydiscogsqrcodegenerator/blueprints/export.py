@@ -312,11 +312,15 @@ def generate_pdf():
     username = session.get("username", "")
     settings = UserSettings.query.filter_by(username=username).first() if username else None
     bottom_text_template = settings.bottom_text_template if settings else None
+    printer_offset_top = settings.printer_offset_top if settings else 0.0
+    printer_offset_left = settings.printer_offset_left if settings else 0.0
 
     pdf_service = _get_pdf_service()
     pdf_bytes = pdf_service.generate_pdf(
         releases, active_indices, layout, bottom_text_template,
         total_slots=total_slots,
+        printer_offset_top=printer_offset_top,
+        printer_offset_left=printer_offset_left,
     )
 
     return Response(

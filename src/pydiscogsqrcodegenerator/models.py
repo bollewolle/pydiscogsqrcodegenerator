@@ -111,6 +111,8 @@ class UserSettings(db.Model):
         nullable=False,
         default="{artist} \u2013 {title} [{year}]\n{discogs_folder}",
     )
+    printer_offset_top = db.Column(db.Float, nullable=False, default=0.0)  # mm
+    printer_offset_left = db.Column(db.Float, nullable=False, default=0.0)  # mm
     active_layout_id = db.Column(
         db.Integer, db.ForeignKey("sticker_layout.id"), nullable=True
     )
