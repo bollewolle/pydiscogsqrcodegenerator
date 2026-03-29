@@ -30,8 +30,6 @@ flask_session/
 .DS_Store
 Thumbs.db
 
-# uv
-uv.lock
 
 # Coverage
 .coverage
