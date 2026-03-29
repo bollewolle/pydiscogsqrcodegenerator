@@ -142,6 +142,13 @@ class PDFService:
                 tmp.close()
                 qr_files[slot] = tmp.name
 
+            # Draw a 10mm verification square in the bottom-right corner of
+            # each page so the user can measure it after printing and confirm
+            # the output is at true 1:1 scale.
+            verify_size = 10  # mm
+            verify_x = page_w - margin_left - verify_size
+            verify_y = page_h - 5 - verify_size  # 5mm from bottom edge
+
             for page in range(total_pages):
                 pdf.add_page()
 
@@ -182,6 +189,27 @@ class PDFService:
                                 x + padding, text_y, usable_w, max(text_h, 1)
                             )
                         # Inactive slots are left empty
+
+                # Verification square and print instruction
+                pdf.set_draw_color(180, 180, 180)
+                pdf.rect(verify_x, verify_y, verify_size, verify_size)
+                pdf.set_font("Helvetica", size=5)
+                pdf.set_text_color(180, 180, 180)
+                label = f"{verify_size}x{verify_size}mm"
+                label_w = pdf.get_string_width(label)
+                pdf.text(
+                    verify_x + (verify_size - label_w) / 2,
+                    verify_y + verify_size / 2 + 1,
+                    label,
+                )
+                notice = 'Print at "Actual size" (100%) - do not use "Fit to page"'
+                notice_w = pdf.get_string_width(notice)
+                pdf.text(
+                    verify_x + verify_size - notice_w,
+                    verify_y - 1,
+                    notice,
+                )
+                pdf.set_text_color(0, 0, 0)
 
         finally:
             import os
