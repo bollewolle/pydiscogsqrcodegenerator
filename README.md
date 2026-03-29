@@ -1,6 +1,6 @@
-# PyDiscogsToQRFactory
+# Discogs QR Code Generator
 
-A web application that connects to the Discogs API to retrieve your record collection and generates CSV files compatible with [QR Factory 3](https://www.tunabellysoftware.com/qrfactory/) for printing QR code stickers for your physical releases.
+A web application that connects to the Discogs API to retrieve your record collection and generates QR code stickers for your physical releases — either as a printable PDF with sticker sheet layouts, or as a CSV file compatible with [QR Factory 3](https://www.tunabellysoftware.com/qrfactory/).
 
 ## Features
 
@@ -11,10 +11,13 @@ A web application that connects to the Discogs API to retrieve your record colle
 - **Latest Additions** — Find releases added since a specific date
 - **Sorting** — Sort by Artist (A-Z/Z-A), Year (Newest/Oldest), or Date Added
 - **Flexible Selection** — Select individual releases, all releases, or filter by artist starting letter
-- **CSV Preview & Edit** — Review and modify CSV output before downloading
-- **QR Factory 3 Format** — Generates CSV in the exact format expected by QR Factory 3
-- **Customizable BottomText** — Configure what text appears below the QR code via the Settings page, using any combination of artist, title, year, folder, format, size, and description
+- **QR Code PDF Generation** — Generate printable PDF sticker sheets with QR codes featuring the Discogs logo overlay
+- **Configurable Sticker Layouts** — Define page size, sticker dimensions, margins, and spacing; includes standard layouts (Default A4, Avery L7120-25, Avery L7121-25) with visual preview
+- **Sticker Slot Activation** — Deactivate individual sticker slots to reuse partially printed pages
+- **QR Factory 3 CSV Export** — Generate CSV files in the exact format expected by QR Factory 3, with preview and edit before downloading
+- **Customizable Text below QR Code** — Configure what text appears below the QR code via the Settings page, using any combination of artist, title, year, folder, format, size, and description
 - **Processing Tracker** — Keeps track of releases already processed to avoid duplicates
+- **Breadcrumb Navigation** — Easy navigation throughout the app
 - **Collection Caching** — API results are cached for 5 minutes to speed up browsing
 
 ## Prerequisites
@@ -23,7 +26,7 @@ A web application that connects to the Discogs API to retrieve your record colle
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - [mise](https://mise.jdx.dev/) (optional, for environment management)
 - A [Discogs developer application](https://www.discogs.com/settings/developers) (for API credentials)
-- [QR Factory 3](https://www.tunabellysoftware.com/qrfactory/) (macOS app for generating QR codes)
+- [QR Factory 3](https://www.tunabellysoftware.com/qrfactory/) (optional — macOS app, only needed for the CSV export workflow)
 
 ## Setup
 
@@ -76,13 +79,11 @@ The app will be available at `http://localhost:5000`.
 
 3. **Select** — Use checkboxes to select individual releases, or use "Select All" / letter filters. Releases previously processed are marked with a "Processed" badge.
 
-4. **Settings (optional)** — Click "Settings" in the navbar to customize the BottomText template. Choose which fields to include (artist, title, year, folder, format, size, description) and arrange them across multiple lines.
+4. **Settings (optional)** — Click "Settings" in the navbar to customize the text template below the QR code, manage sticker layouts, and select the active layout.
 
-5. **Preview** — Click "Preview CSV" to see the generated QR Factory 3 CSV data.
+5. **Export as PDF** — Click "Preview QR Code PDF" to see a page-by-page sticker preview matching your selected layout. Deactivate individual slots to skip already-used sticker positions. Click "Download QR Code PDF" to generate the printable PDF.
 
-6. **Edit (optional)** — Click "Edit Before Download" to modify the BottomText, Content URL, or FileName for any release.
-
-7. **Download** — Click "Download CSV" to get the file, then import it into QR Factory 3.
+6. **Export as QR Factory 3 CSV** — Click "Preview QR Factory 3 CSV" to see the generated CSV data. Optionally click "Edit Before Download" to modify individual fields. Click "Download QR Factory 3 CSV" to get the file, then import it into QR Factory 3.
 
 ## Development
 
@@ -105,16 +106,17 @@ src/pydiscogstoqrfactory/
 ├── __init__.py            # App factory
 ├── config.py              # Configuration classes
 ├── extensions.py          # Flask extensions
-├── models.py              # Database models
+├── models.py              # Database models (UserSettings, StickerLayout, ProcessedRelease)
 ├── discogs_service.py     # Discogs API wrapper
-├── csv_service.py         # CSV generation service
+├── csv_service.py         # QR Factory 3 CSV generation service
+├── pdf_service.py         # QR code PDF sticker sheet generation
 ├── blueprints/
 │   ├── auth.py            # OAuth authentication routes
 │   ├── collection.py      # Collection browsing routes
-│   ├── export.py          # CSV export routes
-│   └── settings.py        # User settings routes
+│   ├── export.py          # CSV and PDF export routes
+│   └── settings.py        # User settings and sticker layout routes
 ├── templates/             # Jinja2 HTML templates
-└── static/                # CSS and JavaScript
+└── static/                # CSS, JavaScript, and Discogs logo
 ```
 
 ### QR Factory 3 CSV format
@@ -123,7 +125,7 @@ The CSV template is defined in `templates/qrfactory_discogs_collection_template.
 
 - **Type**: URL
 - **Content**: Link to the Discogs release page
-- **BottomText**: Customizable via Settings (default: `Artist – Title [Year]` / `Folder`). Available placeholders: `{artist}`, `{title}`, `{year}`, `{discogs_folder}`, `{format_name}`, `{format_size}`, `{format_descriptions}`
+- **BottomText**: Customizable via Settings (default: `Artist – Title [Year]` / `Folder`). Available placeholders: `{artist}`, `{title}`, `{year}`, `{discogs_folder}`, `{format_name}`, `{format_size}`, `{format_descriptions}`. This same template is also used for the text below the QR code in the PDF export.
 - **FileName**: The Discogs release ID
 - **Icon**: Discogs record icon overlay
 
