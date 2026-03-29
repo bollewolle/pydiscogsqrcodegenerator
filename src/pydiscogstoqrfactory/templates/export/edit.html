@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1>Edit CSV Data</h1>
+{% include "_breadcrumbs.html" %}
 <p>Edit the highlighted fields before downloading. Other fields are fixed QR code settings.</p>
 
 <form method="post" action="{{ url_for('export.download') }}" id="edit-form">
@@ -49,7 +50,6 @@
 
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Download QR Factory 3 CSV</button>
-        <a href="{{ url_for('collection.landing') }}" class="btn">Cancel</a>
     </div>
 </form>
 

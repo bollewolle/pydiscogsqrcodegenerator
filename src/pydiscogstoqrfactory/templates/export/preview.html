@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1>QR Factory 3 CSV Preview</h1>
+{% include "_breadcrumbs.html" %}
 <p>{{ rows | length }} release(s) selected</p>
 
 <div class="table-scroll">
@@ -42,5 +43,4 @@
     </form>
 </div>
 
-<p><a href="{{ url_for('collection.landing') }}">&larr; Back to Home</a></p>
 {% endblock %}

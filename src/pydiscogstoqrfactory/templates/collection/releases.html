@@ -4,7 +4,12 @@
 
 {% block content %}
 <h1>Releases</h1>
-<p><a href="{{ url_for('collection.folders') }}">&larr; Back to Folders</a></p>
+{% set breadcrumbs = [
+    {"label": "Home", "url": url_for('collection.landing')},
+    {"label": "Folders", "url": url_for('collection.folders')},
+    {"label": folder_name},
+] %}
+{% include "_breadcrumbs.html" %}
 
 <!-- Sort controls -->
 <div class="controls">
@@ -44,13 +49,19 @@
 </div>
 
 <form id="releases-form" method="post" action="{{ url_for('export.preview') }}">
+    <input type="hidden" name="releases_data" id="releases-data">
+    <input type="hidden" name="breadcrumbs" id="breadcrumbs-data"
+           value='{{ [
+               {"label": "Home", "url": url_for("collection.landing")},
+               {"label": "Folders", "url": url_for("collection.folders")},
+               {"label": folder_name, "url": url_for("collection.folder_releases", folder_id=folder_id)},
+           ] | tojson }}'>
+
     <div class="selection-controls">
         <button type="button" id="select-all" class="btn btn-sm">Select All</button>
         <button type="button" id="deselect-all" class="btn btn-sm">Deselect All</button>
         <span id="selection-count">0 selected</span>
     </div>
-
-    <input type="hidden" name="releases_data" id="releases-data">
 
     <table class="releases-table">
         <thead>

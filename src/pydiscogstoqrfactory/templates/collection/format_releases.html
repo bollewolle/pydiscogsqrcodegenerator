@@ -4,7 +4,21 @@
 
 {% block content %}
 <h1>{{ format_label }}</h1>
-<p><a href="{% if size %}{{ url_for('collection.format_sizes', name=format_name) }}{% else %}{{ url_for('collection.formats') }}{% endif %}">&larr; Back</a></p>
+{% if size %}
+{% set breadcrumbs = [
+    {"label": "Home", "url": url_for('collection.landing')},
+    {"label": "Formats", "url": url_for('collection.formats')},
+    {"label": format_name, "url": url_for('collection.format_sizes', name=format_name)},
+    {"label": size},
+] %}
+{% else %}
+{% set breadcrumbs = [
+    {"label": "Home", "url": url_for('collection.landing')},
+    {"label": "Formats", "url": url_for('collection.formats')},
+    {"label": format_name},
+] %}
+{% endif %}
+{% include "_breadcrumbs.html" %}
 
 <!-- Sort controls -->
 <div class="controls">
@@ -47,13 +61,29 @@
 
 {% if releases %}
 <form id="releases-form" method="post" action="{{ url_for('export.preview') }}">
+    <input type="hidden" name="releases_data" id="releases-data">
+    {% if size %}
+    <input type="hidden" name="breadcrumbs" id="breadcrumbs-data"
+           value='{{ [
+               {"label": "Home", "url": url_for("collection.landing")},
+               {"label": "Formats", "url": url_for("collection.formats")},
+               {"label": format_name, "url": url_for("collection.format_sizes", name=format_name)},
+               {"label": size, "url": url_for("collection.format_releases", name=format_name, size=size)},
+           ] | tojson }}'>
+    {% else %}
+    <input type="hidden" name="breadcrumbs" id="breadcrumbs-data"
+           value='{{ [
+               {"label": "Home", "url": url_for("collection.landing")},
+               {"label": "Formats", "url": url_for("collection.formats")},
+               {"label": format_name, "url": url_for("collection.format_releases", name=format_name)},
+           ] | tojson }}'>
+    {% endif %}
+
     <div class="selection-controls">
         <button type="button" id="select-all" class="btn btn-sm">Select All</button>
         <button type="button" id="deselect-all" class="btn btn-sm">Deselect All</button>
         <span id="selection-count">0 selected</span>
     </div>
-
-    <input type="hidden" name="releases_data" id="releases-data">
 
     <table class="releases-table">
         <thead>

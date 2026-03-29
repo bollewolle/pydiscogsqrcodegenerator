@@ -62,6 +62,10 @@ def folder_releases(folder_id: int):
 
     try:
         releases = service.get_folder_releases(username, folder_id, sort, order)
+        folder_list = service.get_folders(username)
+        folder_name = next(
+            (f["name"] for f in folder_list if f["id"] == folder_id), "Folder"
+        )
     except Exception as e:
         flash(f"Failed to retrieve releases: {e}", "error")
         return redirect(url_for("collection.folders"))
@@ -86,6 +90,7 @@ def folder_releases(folder_id: int):
         "collection/releases.html",
         releases=releases,
         folder_id=folder_id,
+        folder_name=folder_name,
         sort=sort,
         order=order,
         letter=letter,

@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1>Preview QR Code PDF</h1>
+{% include "_breadcrumbs.html" %}
 <p>{{ releases | length }} release(s) selected. Click a sticker slot to deactivate/activate it.
     This is useful when reusing a partially printed sticker page — deactivate slots that have already been used
     so that new QR codes are only printed on the remaining blank stickers, making the most of every page.</p>
@@ -45,7 +46,6 @@
         <input type="hidden" name="releases_data" value='{{ releases | tojson }}'>
         <button type="submit" class="btn btn-sm btn-success">Mark as Processed</button>
     </form>
-    <a href="{{ url_for('collection.landing') }}" class="btn">Cancel</a>
 </div>
 
 <script>

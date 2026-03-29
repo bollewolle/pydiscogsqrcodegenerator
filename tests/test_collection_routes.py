@@ -74,6 +74,12 @@ class TestFolderReleases:
             },
         ]
 
+    def _mock_folders(self):
+        return [
+            {"id": 0, "name": "All", "count": 100},
+            {"id": 1, "name": "Vinyl", "count": 50},
+        ]
+
     def test_folder_releases_lists_releases(self, client):
         with client.session_transaction() as sess:
             sess["username"] = "testuser"
@@ -85,6 +91,7 @@ class TestFolderReleases:
         ) as mock_auth:
             service = MagicMock()
             service.get_folder_releases.return_value = self._mock_releases()
+            service.get_folders.return_value = self._mock_folders()
             mock_auth.return_value = service
 
             response = client.get("/collection/folders/1")
@@ -103,6 +110,7 @@ class TestFolderReleases:
         ) as mock_auth:
             service = MagicMock()
             service.get_folder_releases.return_value = self._mock_releases()
+            service.get_folders.return_value = self._mock_folders()
             mock_auth.return_value = service
 
             response = client.get("/collection/folders/1?letter=A")

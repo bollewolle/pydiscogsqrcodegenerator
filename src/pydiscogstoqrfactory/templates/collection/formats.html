@@ -4,7 +4,11 @@
 
 {% block content %}
 <h1>Browse by Format</h1>
-<p><a href="{{ url_for('collection.landing') }}">&larr; Back to Home</a></p>
+{% set breadcrumbs = [
+    {"label": "Home", "url": url_for('collection.landing')},
+    {"label": "Formats"},
+] %}
+{% include "_breadcrumbs.html" %}
 
 {% if formats %}
 <div class="folders-grid">

@@ -153,6 +153,15 @@ document.addEventListener('DOMContentLoaded', function () {
             input.name = 'releases_data';
             input.value = JSON.stringify(selected);
             hiddenForm.appendChild(input);
+            // Include breadcrumbs if available
+            var breadcrumbsInput = document.getElementById('breadcrumbs-data');
+            if (breadcrumbsInput) {
+                var bcInput = document.createElement('input');
+                bcInput.type = 'hidden';
+                bcInput.name = 'breadcrumbs';
+                bcInput.value = breadcrumbsInput.value;
+                hiddenForm.appendChild(bcInput);
+            }
             document.body.appendChild(hiddenForm);
             hiddenForm.submit();
         });

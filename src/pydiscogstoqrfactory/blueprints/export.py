@@ -31,6 +31,15 @@ def _get_pdf_service() -> PDFService:
     )
 
 
+def _parse_breadcrumbs(form_data):
+    """Parse breadcrumbs JSON from form data."""
+    breadcrumbs_json = form_data.get("breadcrumbs", "[]")
+    try:
+        return json.loads(breadcrumbs_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 @export_bp.route("/preview", methods=["POST"])
 def preview():
     """Preview QR Factory 3 CSV output for selected releases."""
@@ -57,6 +66,12 @@ def preview():
 
     rows = csv_service.generate_rows(releases, bottom_text_template=bottom_text)
 
+    # Parse source breadcrumbs and store in session for edit page
+    source_breadcrumbs = _parse_breadcrumbs(request.form)
+    session["source_breadcrumbs"] = source_breadcrumbs
+
+    breadcrumbs = source_breadcrumbs + [{"label": "QR Factory 3 CSV Preview"}]
+
     # Store in session for subsequent edit/download
     session["preview_releases"] = releases
     session["preview_rows"] = rows
@@ -66,6 +81,7 @@ def preview():
         rows=rows,
         header=csv_service.header,
         releases=releases,
+        breadcrumbs=breadcrumbs,
     )
 
 
@@ -84,12 +100,19 @@ def edit():
     # Editable columns
     editable_cols = ["BottomText", "Content", "FileName"]
 
+    source_breadcrumbs = session.get("source_breadcrumbs", [])
+    breadcrumbs = source_breadcrumbs + [
+        {"label": "QR Factory 3 CSV Preview", "url": "javascript:history.back()"},
+        {"label": "Edit CSV"},
+    ]
+
     return render_template(
         "export/edit.html",
         rows=rows,
         header=csv_service.header,
         editable_cols=editable_cols,
         releases=session.get("preview_releases", []),
+        breadcrumbs=breadcrumbs,
     )
 
 
@@ -232,6 +255,9 @@ def preview_pdf():
     pdf_service = _get_pdf_service()
     layout_info = pdf_service.compute_layout_info(layout, len(releases))
 
+    source_breadcrumbs = _parse_breadcrumbs(request.form)
+    breadcrumbs = source_breadcrumbs + [{"label": "Preview QR Code PDF"}]
+
     return render_template(
         "export/preview_pdf.html",
         releases=releases,
@@ -239,6 +265,7 @@ def preview_pdf():
         layout=layout,
         layouts=layouts,
         layout_info=layout_info,
+        breadcrumbs=breadcrumbs,
     )
 
 

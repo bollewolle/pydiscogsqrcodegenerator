@@ -4,7 +4,11 @@
 
 {% block content %}
 <h1>Settings</h1>
-<p><a href="{{ url_for('collection.landing') }}">&larr; Back to Home</a></p>
+{% set breadcrumbs = [
+    {"label": "Home", "url": url_for('collection.landing')},
+    {"label": "Settings"},
+] %}
+{% include "_breadcrumbs.html" %}
 
 <form method="post" action="{{ url_for('settings.save') }}" id="settings-form">
     <div class="settings-section">
