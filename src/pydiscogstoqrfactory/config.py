@@ -30,6 +30,9 @@ class BaseConfig:
     # CSV template
     CSV_TEMPLATE_PATH = Path(__file__).parent.parent.parent / "templates" / "qrfactory_discogs_collection_template.csv"
 
+    # QR PDF logo
+    LOGO_PATH = Path(__file__).parent / "static" / "discogs_logo.png"
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

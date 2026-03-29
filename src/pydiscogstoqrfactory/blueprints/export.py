@@ -2,6 +2,7 @@ import json
 
 from flask import (
     Blueprint,
+    Response,
     current_app,
     flash,
     redirect,
@@ -13,13 +14,21 @@ from flask import (
 
 from ..csv_service import CSVService
 from ..extensions import db
-from ..models import ProcessedRelease, UserSettings
+from ..models import ProcessedRelease, StickerLayout, UserSettings
+from ..pdf_service import PDFService
 
 export_bp = Blueprint("export", __name__, url_prefix="/export")
 
 
 def _get_csv_service() -> CSVService:
     return CSVService(current_app.config["CSV_TEMPLATE_PATH"])
+
+
+def _get_pdf_service() -> PDFService:
+    return PDFService(
+        current_app.config["LOGO_PATH"],
+        current_app.config["CSV_TEMPLATE_PATH"],
+    )
 
 
 @export_bp.route("/preview", methods=["POST"])
@@ -168,6 +177,126 @@ def unmark_processed():
 
     flash(f"Removed processed status from {count} release(s).", "success")
     return redirect(request.referrer or url_for("collection.landing"))
+
+
+@export_bp.route("/preview-pdf", methods=["POST"])
+def preview_pdf():
+    """Preview QR PDF sticker sheet — shows a grid of stickers that can be toggled."""
+    releases_json = request.form.get("releases_data")
+    if not releases_json:
+        flash("No releases selected.", "warning")
+        return redirect(url_for("collection.landing"))
+
+    try:
+        releases = json.loads(releases_json)
+    except (json.JSONDecodeError, TypeError):
+        flash("Invalid release data.", "error")
+        return redirect(url_for("collection.landing"))
+
+    username = session.get("username", "")
+    settings = UserSettings.query.filter_by(username=username).first() if username else None
+    bottom_text_template = settings.bottom_text_template if settings else None
+
+    # Get active layout
+    layout = None
+    if settings and settings.active_layout_id:
+        layout_model = db.session.get(StickerLayout, settings.active_layout_id)
+        if layout_model:
+            layout = layout_model.to_dict()
+
+    if not layout:
+        # Fallback default layout values
+        layout = {
+            "id": None, "name": "Default",
+            "page_width": 210.0, "page_height": 297.0,
+            "sticker_width": 50.0, "sticker_height": 50.0,
+            "margin_top": 10.0, "margin_left": 10.0,
+            "spacing_x": 5.0, "spacing_y": 5.0,
+            "cols": 3, "rows": 5, "stickers_per_page": 15,
+        }
+
+    # Get all user layouts for the dropdown
+    layouts = []
+    if username:
+        layouts = [l.to_dict() for l in StickerLayout.query.filter_by(username=username).all()]
+
+    # Generate BottomText for each release using CSVService
+    csv_service = _get_csv_service()
+    rows = csv_service.generate_rows(releases, bottom_text_template=bottom_text_template)
+    bottom_texts = [row.get("BottomText", "") for row in rows]
+
+    # Store in session for subsequent download
+    session["pdf_releases"] = releases
+    session["pdf_bottom_texts"] = bottom_texts
+
+    pdf_service = _get_pdf_service()
+    layout_info = pdf_service.compute_layout_info(layout, len(releases))
+
+    return render_template(
+        "export/preview_pdf.html",
+        releases=releases,
+        bottom_texts=bottom_texts,
+        layout=layout,
+        layouts=layouts,
+        layout_info=layout_info,
+    )
+
+
+@export_bp.route("/generate-pdf", methods=["POST"])
+def generate_pdf():
+    """Generate and return the PDF file."""
+    releases = session.get("pdf_releases")
+    bottom_texts = session.get("pdf_bottom_texts")
+
+    if not releases:
+        flash("No release data found. Please select releases again.", "warning")
+        return redirect(url_for("collection.landing"))
+
+    # Get active slot indices from form
+    active_json = request.form.get("active_indices", "[]")
+    try:
+        active_indices = json.loads(active_json)
+    except (json.JSONDecodeError, TypeError):
+        active_indices = list(range(len(releases)))
+
+    # Get total slots from form
+    total_slots = request.form.get("total_slots", type=int)
+
+    # Get layout from form or session
+    layout_json = request.form.get("layout_data")
+    if layout_json:
+        try:
+            layout = json.loads(layout_json)
+        except (json.JSONDecodeError, TypeError):
+            layout = {
+            "page_width": 210.0, "page_height": 297.0,
+            "sticker_width": 50.0, "sticker_height": 50.0,
+            "margin_top": 10.0, "margin_left": 10.0,
+            "spacing_x": 5.0, "spacing_y": 5.0,
+        }
+    else:
+        layout = {
+            "page_width": 210.0, "page_height": 297.0,
+            "sticker_width": 50.0, "sticker_height": 50.0,
+            "margin_top": 10.0, "margin_left": 10.0,
+            "spacing_x": 5.0, "spacing_y": 5.0,
+        }
+
+    username = session.get("username", "")
+    settings = UserSettings.query.filter_by(username=username).first() if username else None
+    bottom_text_template = settings.bottom_text_template if settings else None
+
+    pdf_service = _get_pdf_service()
+    pdf_bytes = pdf_service.generate_pdf(
+        releases, active_indices, layout, bottom_text_template,
+        total_slots=total_slots,
+    )
+
+    return Response(
+        bytes(pdf_bytes),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="qr_stickers.pdf"'},
+    )
 
 
 @export_bp.route("/clear-session", methods=["POST"])

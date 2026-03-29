@@ -81,6 +81,8 @@
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" id="preview-btn">Preview CSV</button>
+                <button type="button" class="btn btn-primary" id="preview-pdf-btn"
+                        data-action="{{ url_for('export.preview_pdf') }}">Preview QR Code PDF</button>
                 <button type="button" class="btn btn-sm" id="unmark-processed-btn"
                         data-action="{{ url_for('export.unmark_processed') }}">Unmark Processed</button>
             </div>

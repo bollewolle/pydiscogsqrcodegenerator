@@ -134,6 +134,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Preview QR PDF button
+    var previewPdfBtn = document.getElementById('preview-pdf-btn');
+    if (previewPdfBtn) {
+        previewPdfBtn.addEventListener('click', function () {
+            var selected = collectSelectedReleases();
+            if (selected.length === 0) {
+                showWarning('Please select at least one release before previewing.');
+                return;
+            }
+            hideWarning();
+            // Submit to preview-pdf endpoint via a hidden form
+            var hiddenForm = document.createElement('form');
+            hiddenForm.method = 'POST';
+            hiddenForm.action = previewPdfBtn.dataset.action;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'releases_data';
+            input.value = JSON.stringify(selected);
+            hiddenForm.appendChild(input);
+            document.body.appendChild(hiddenForm);
+            hiddenForm.submit();
+        });
+    }
+
     // Form submission: collect selected releases into hidden field
     form.addEventListener('submit', function (e) {
         var selected = collectSelectedReleases();
