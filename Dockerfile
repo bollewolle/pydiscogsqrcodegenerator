@@ -25,4 +25,4 @@ EXPOSE 5001
 # Run with gunicorn for production
 RUN uv pip install gunicorn
 
-CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "pydiscogstoqrfactory:create_app()"]
+CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "--preload", "pydiscogstoqrfactory:create_app()"]
