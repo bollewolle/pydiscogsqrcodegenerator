@@ -5,7 +5,7 @@ class TestLanding:
     def test_landing_page_loads(self, client):
         response = client.get("/")
         assert response.status_code == 200
-        assert b"Discogs to QR Factory" in response.data
+        assert b"Discogs QR Code Generator" in response.data
 
     def test_landing_shows_login_when_unauthenticated(self, client):
         response = client.get("/")

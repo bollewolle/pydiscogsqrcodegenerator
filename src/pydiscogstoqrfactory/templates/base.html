@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Discogs to QR Factory{% endblock %}</title>
+    <title>{% block title %}Discogs QR Code Generator{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-brand">
-            <a href="{{ url_for('collection.landing') }}">Discogs &rarr; QR Factory</a>
+            <a href="{{ url_for('collection.landing') }}">Discogs QR Code Generator</a>
         </div>
         <div class="nav-links">
             {% if session.get('username') %}

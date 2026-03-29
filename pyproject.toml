@@ -1,7 +1,7 @@
 [project]
 name = "pydiscogstoqrfactory"
 version = "0.1.0"
-description = "Convert Discogs collection to QR Factory 3 CSV files for printing QR code stickers"
+description = "Generate QR code stickers for your Discogs record collection"
 requires-python = ">=3.12"
 license = "MIT"
 dependencies = [

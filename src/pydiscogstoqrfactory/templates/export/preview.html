@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}CSV Preview{% endblock %}
+{% block title %}QR Factory 3 CSV Preview{% endblock %}
 
 {% block content %}
-<h1>CSV Preview</h1>
+<h1>QR Factory 3 CSV Preview</h1>
 <p>{{ rows | length }} release(s) selected</p>
 
 <div class="table-scroll">
@@ -33,7 +33,7 @@
     </form>
 
     <form method="post" action="{{ url_for('export.download') }}" class="inline-form">
-        <button type="submit" class="btn btn-primary">Download CSV</button>
+        <button type="submit" class="btn btn-primary">Download QR Factory 3 CSV</button>
     </form>
 
     <form method="post" action="{{ url_for('export.mark_processed') }}" class="inline-form">

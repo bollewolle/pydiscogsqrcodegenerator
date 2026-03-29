@@ -12,7 +12,7 @@ class TestSettingsIndex:
 
         response = client.get("/settings/")
         assert response.status_code == 200
-        assert b"BottomText Template" in response.data
+        assert b"Template for Text below QR Code" in response.data
         assert b"{artist}" in response.data
 
     def test_shows_saved_template(self, client, db):

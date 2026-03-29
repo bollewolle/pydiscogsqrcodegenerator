@@ -6,7 +6,7 @@ from flask import Response
 
 
 class CSVService:
-    """Generate QR Factory 3 compatible CSV files from release data."""
+    """Generate CSV files from release data, compatible with QR Factory 3."""
 
     def __init__(self, template_path: str | Path):
         self.template_path = Path(template_path)

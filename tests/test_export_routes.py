@@ -10,7 +10,7 @@ class TestPreview:
             data={"releases_data": json.dumps(sample_releases)},
         )
         assert response.status_code == 200
-        assert b"CSV Preview" in response.data
+        assert b"QR Factory 3 CSV Preview" in response.data
         assert b"SOHN" in response.data
 
     def test_preview_uses_custom_bottom_text(self, client, db, sample_releases):

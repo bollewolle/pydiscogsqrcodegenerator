@@ -33,7 +33,7 @@ def _get_pdf_service() -> PDFService:
 
 @export_bp.route("/preview", methods=["POST"])
 def preview():
-    """Preview CSV output for selected releases."""
+    """Preview QR Factory 3 CSV output for selected releases."""
     releases_json = request.form.get("releases_data")
     if not releases_json:
         flash("No releases selected.", "warning")
@@ -95,7 +95,7 @@ def edit():
 
 @export_bp.route("/download", methods=["POST"])
 def download():
-    """Download CSV file."""
+    """Download QR Factory 3 CSV file."""
     rows_json = request.form.get("rows_data")
     if rows_json:
         try:
