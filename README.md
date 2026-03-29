@@ -87,21 +87,23 @@ The app will be available at `http://localhost:5000`.
 
 ## Docker
 
-You can run the application using Docker Compose, which is the easiest way to get started without installing Python or uv locally.
+A pre-built Docker image is published to GitHub Container Registry on every push to `main`. You can run the app standalone or add it to an existing Docker Compose stack.
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (included with Docker Desktop)
 - A [Discogs developer application](https://www.discogs.com/settings/developers) (for API credentials)
 
-### 1. Clone the repository
+### Standalone setup
+
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/bollewolle/pydiscogsqrcodegenerator.git
 cd pydiscogsqrcodegenerator
 ```
 
-### 2. Set up environment variables
+#### 2. Set up environment variables
 
 ```bash
 cp .env.example .env
@@ -114,7 +116,7 @@ DISCOGS_CONSUMER_KEY=your_consumer_key
 DISCOGS_CONSUMER_SECRET=your_consumer_secret
 ```
 
-### 3. Start the application
+#### 3. Start the application
 
 ```bash
 docker compose up -d
@@ -122,21 +124,68 @@ docker compose up -d
 
 The app will be available at `http://localhost:8721`.
 
-### Stopping the application
+### Adding to an existing Docker Compose stack
+
+To add this app to an existing `docker-compose.yml`, add the following service definition:
+
+```yaml
+services:
+  # ... your other services ...
+
+  discogs-qr:
+    image: ghcr.io/bollewolle/pydiscogsqrcodegenerator:latest
+    ports:
+      - "8721:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - FRONTEND_URL=http://localhost:8721
+      - DISCOGS_CONSUMER_KEY=your_consumer_key
+      - DISCOGS_CONSUMER_SECRET=your_consumer_secret
+      # Optional: add these if you have OAuth tokens
+      # - DISCOGS_OAUTH_TOKEN=your_oauth_token
+      # - DISCOGS_OAUTH_TOKEN_SECRET=your_oauth_token_secret
+      - USERAGENT=pydiscogstoqrfactory/1.0
+    volumes:
+      - discogs-qr-data:/app/instance
+    restart: unless-stopped
+
+volumes:
+  # ... your other volumes ...
+  discogs-qr-data:
+```
+
+Alternatively, instead of inline environment variables, you can use an `env_file` pointing to a `.env` file (see `.env.example` in this repository for the full list of variables).
+
+### Updating to the latest version
+
+Pull the latest image and recreate the container:
 
 ```bash
-docker compose down
+docker compose pull
+docker compose up -d
 ```
 
 ### Persistent data
 
-The SQLite database and session files are stored in a Docker volume (`app-data`). Your data persists across container restarts. To completely reset the data:
+The SQLite database and session files are stored in a Docker volume. Your data persists across container restarts and updates. To completely reset the data:
 
 ```bash
 docker compose down -v
 ```
 
-### Rebuilding after updates
+### Building locally (optional)
+
+If you prefer to build the image yourself instead of using the pre-built one, replace `image:` with `build:` in your `docker-compose.yml`:
+
+```yaml
+services:
+  discogs-qr:
+    build: .
+    # ... rest of the configuration stays the same
+```
+
+Then build and start:
 
 ```bash
 docker compose up -d --build

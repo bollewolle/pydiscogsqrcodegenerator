@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    image: ghcr.io/bollewolle/pydiscogsqrcodegenerator:latest
     ports:
       - "8721:5001"
     env_file:
