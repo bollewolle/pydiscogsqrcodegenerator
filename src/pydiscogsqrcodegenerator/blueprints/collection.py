@@ -43,6 +43,14 @@ def folders():
         flash(f"Failed to retrieve folders: {e}", "error")
         return redirect(url_for("collection.landing"))
 
+    # Count processed releases per folder name
+    processed_per_folder = _get_processed_counts_by_folder()
+    for folder in folder_list:
+        processed_count = processed_per_folder.get(folder["name"], 0)
+        folder["fully_processed"] = (
+            folder["count"] > 0 and processed_count >= folder["count"]
+        )
+
     return render_template("collection/folders.html", folders=folder_list)
 
 
@@ -267,6 +275,20 @@ def _get_processed_ids() -> set[int]:
         ProcessedRelease.discogs_release_id
     ).all()
     return {p.discogs_release_id for p in processed}
+
+
+def _get_processed_counts_by_folder() -> dict[str, int]:
+    """Get count of processed releases grouped by folder name."""
+    from sqlalchemy import func
+
+    rows = (
+        db.session.query(
+            ProcessedRelease.folder_name, func.count(ProcessedRelease.id)
+        )
+        .group_by(ProcessedRelease.folder_name)
+        .all()
+    )
+    return {name: count for name, count in rows if name}
 
 
 def _sort_releases(releases: list[dict], sort: str, order: str) -> list[dict]:

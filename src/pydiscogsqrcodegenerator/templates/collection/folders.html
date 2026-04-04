@@ -15,6 +15,7 @@
         <a href="{{ url_for('collection.folder_releases', folder_id=folder.id) }}" class="folder-card">
             <h3>{{ folder.name }}</h3>
             <span class="badge">{{ folder.count }} releases</span>
+            {% if folder.fully_processed %}<span class="badge badge-processed">Fully Processed</span>{% endif %}
         </a>
     {% endfor %}
 </div>
