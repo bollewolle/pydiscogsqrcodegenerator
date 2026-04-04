@@ -39,6 +39,11 @@ def create_app(config_class=None):
         config_class = get_config()
     app.config.from_object(config_class)
 
+    # Default database to instance folder so it persists with Docker volumes
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        db_path = os.path.join(app.instance_path, "app.db")
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+
     # Configure session cachelib backend
     session_dir = os.path.join(app.instance_path, "flask_session")
     app.config.setdefault("SESSION_CACHELIB", FileSystemCache(session_dir))
