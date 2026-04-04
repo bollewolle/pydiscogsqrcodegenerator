@@ -28,7 +28,10 @@ def create_app(config_class=None):
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
 
-    app = Flask(__name__, instance_relative_config=True)
+    # Set instance_path to cwd/instance so it aligns with the Docker volume mount
+    # (Flask defaults to package_parent/instance which would be src/instance)
+    instance_path = os.path.join(os.getcwd(), "instance")
+    app = Flask(__name__, instance_path=instance_path, instance_relative_config=True)
     app.request_class = LargeFormRequest
 
     # Ensure instance folder exists
