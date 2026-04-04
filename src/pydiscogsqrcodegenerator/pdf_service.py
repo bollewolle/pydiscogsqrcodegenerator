@@ -22,6 +22,11 @@ class PDFService:
         "\u201c": '"',  # left double quote
         "\u201d": '"',  # right double quote
         "\u2026": "...",  # ellipsis
+        "\u2153": "1/3",  # ⅓
+        "\u2154": "2/3",  # ⅔
+        "\u2155": "1/5",  # ⅕
+        "\u2159": "1/6",  # ⅙
+        "\u215b": "1/8",  # ⅛
     }
 
     def __init__(self, logo_path: str | Path, csv_template_path: str | Path):
