@@ -17,7 +17,7 @@ A web application that connects to the Discogs API to retrieve your record colle
 - **Sticker Slot Activation** — Deactivate individual sticker slots to reuse partially printed pages
 - **QR Factory 3 CSV Export** — Generate CSV files in the exact format expected by QR Factory 3, with preview and edit before downloading
 - **Customizable Text below QR Code** — Configure what text appears below the QR code via the Settings page, using any combination of artist, title, year, folder, format, size, and description
-- **Processing Tracker** — Keeps track of releases already processed to avoid duplicates
+- **Processing Tracker** — Keeps track of releases already processed to avoid duplicates; folders where all releases are processed show a "Fully Processed" badge
 - **Breadcrumb Navigation** — Easy navigation throughout the app
 - **Collection Caching** — API results are cached for 5 minutes to speed up browsing
 
@@ -82,7 +82,7 @@ The app will be available at `http://localhost:5000`.
 
 4. **Settings (optional)** — Click "Settings" in the navbar to customize the text template below the QR code, manage sticker layouts, select the active layout, and configure printer offset correction.
 
-5. **Printer Calibration (optional)** — If printed stickers don't align with your sticker sheet, go to Settings and download the test page PDF. Print it at 100% scale (Actual size), measure the margins with a ruler, and enter the difference as offset values. For example, if the top margin measures 28mm but should be 26mm, set Offset Top to 2.
+5. **Printer Calibration** *(optional, experimental)* — If printed stickers don't align with your sticker sheet, go to Settings and download the test page PDF. Print it at 100% scale (Actual size), measure the margins with a ruler, and enter the difference as offset values. For example, if the top margin measures 28mm but should be 26mm, set Offset Top to 2. Note: this feature is experimental and may not produce accurate results with all printers.
 
 6. **Export as PDF** — Click "Preview QR Code PDF" to see a page-by-page sticker preview matching your selected layout. Deactivate individual slots to skip already-used sticker positions. Click "Download QR Code PDF" to generate the printable PDF. Always print at "Actual size" (100%) — never use "Fit to page".
 
@@ -173,7 +173,7 @@ docker compose up -d
 
 ### Persistent data
 
-The SQLite database and session files are stored in a Docker volume. Your data persists across container restarts and updates. To completely reset the data:
+The SQLite database (settings, sticker layouts, processed releases, OAuth tokens) and session files are stored in a Docker volume (`/app/instance`). Your data persists across container restarts and image updates. To completely reset the data:
 
 ```bash
 docker compose down -v
