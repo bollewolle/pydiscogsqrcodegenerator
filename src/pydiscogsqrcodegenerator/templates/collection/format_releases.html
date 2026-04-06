@@ -50,11 +50,15 @@
     </div>
     {% endif %}
 
-    <!-- Hide processed toggle -->
+    <!-- Filter toggles -->
     <div class="filter-controls">
-        <a href="{{ url_for('collection.format_releases', name=format_name, size=size, desc=active_filters, sort=sort, order=order, hide_processed='' if hide_processed else '1') }}"
+        <a href="{{ url_for('collection.format_releases', name=format_name, size=size, desc=active_filters, sort=sort, order=order, hide_processed='' if hide_processed else '1', show_changed='1' if show_changed else '') }}"
            class="btn btn-sm {% if hide_processed %}btn-active{% endif %}">
             {% if hide_processed %}Show All{% else %}Hide Processed{% endif %}
+        </a>
+        <a href="{{ url_for('collection.format_releases', name=format_name, size=size, desc=active_filters, sort=sort, order=order, hide_processed='1' if hide_processed else '', show_changed='' if show_changed else '1') }}"
+           class="btn btn-sm {% if show_changed %}btn-active{% endif %}">
+            {% if show_changed %}Show All{% else %}Show Changed Only{% endif %}
         </a>
     </div>
 </div>

@@ -94,6 +94,7 @@ def folder_releases(folder_id: int):
     order = request.args.get("order", "asc")
     letter = request.args.get("letter", "")
     hide_processed = request.args.get("hide_processed", "") == "1"
+    show_changed = request.args.get("show_changed", "") == "1"
 
     try:
         releases = service.get_folder_releases(username, folder_id, sort, order)
@@ -120,6 +121,10 @@ def folder_releases(folder_id: int):
     if hide_processed:
         releases = [r for r in releases if r["id"] not in processed_ids]
 
+    # Filter to only changed releases if requested
+    if show_changed:
+        releases = [r for r in releases if r["id"] in change_details]
+
     # Get unique starting letters for the letter bar
     letters = sorted({r["artist"][0].upper() for r in releases if r["artist"]})
 
@@ -136,6 +141,7 @@ def folder_releases(folder_id: int):
         change_details=change_details,
         processed_at_map=processed_at_map,
         hide_processed=hide_processed,
+        show_changed=show_changed,
     )
 
 
@@ -171,6 +177,7 @@ def latest():
     sort = request.form.get("sort", "date_added")
     order = request.form.get("order", "desc")
     hide_processed = request.form.get("hide_processed", "") == "1"
+    show_changed = request.form.get("show_changed", "") == "1"
     releases = _sort_releases(releases, sort, order)
 
     processed_ids = _get_processed_ids()
@@ -181,6 +188,10 @@ def latest():
     if hide_processed:
         releases = [r for r in releases if r["id"] not in processed_ids]
 
+    # Filter to only changed releases if requested
+    if show_changed:
+        releases = [r for r in releases if r["id"] in change_details]
+
     letters = sorted({r["artist"][0].upper() for r in releases if r["artist"]})
 
     return render_template(
@@ -190,6 +201,7 @@ def latest():
         sort=sort,
         order=order,
         hide_processed=hide_processed,
+        show_changed=show_changed,
         letters=letters,
         processed_ids=processed_ids,
         change_details=change_details,
@@ -353,6 +365,7 @@ def format_releases():
     sort = request.args.get("sort", "artist")
     order = request.args.get("order", "asc")
     hide_processed = request.args.get("hide_processed", "") == "1"
+    show_changed = request.args.get("show_changed", "") == "1"
 
     if not format_name:
         flash("No format specified.", "warning")
@@ -374,6 +387,9 @@ def format_releases():
 
     if hide_processed:
         releases = [r for r in releases if r["id"] not in processed_ids]
+
+    if show_changed:
+        releases = [r for r in releases if r["id"] in change_details]
 
     letters = sorted({r["artist"][0].upper() for r in releases if r["artist"]})
 
@@ -398,6 +414,7 @@ def format_releases():
         change_details=change_details,
         processed_at_map=processed_at_map,
         hide_processed=hide_processed,
+        show_changed=show_changed,
     )
 
 

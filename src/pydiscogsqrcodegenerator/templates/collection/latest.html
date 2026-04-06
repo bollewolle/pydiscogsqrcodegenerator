@@ -26,8 +26,19 @@
             <input type="hidden" name="sort" value="{{ sort | default('date_added', true) }}">
             <input type="hidden" name="order" value="{{ order | default('desc', true) }}">
             <input type="hidden" name="hide_processed" value="{{ '' if hide_processed else '1' }}">
+            <input type="hidden" name="show_changed" value="{{ '1' if show_changed else '' }}">
             <button type="submit" class="btn btn-sm {% if hide_processed %}btn-active{% endif %}">
                 {% if hide_processed %}Show All{% else %}Hide Processed{% endif %}
+            </button>
+        </form>
+        <form method="post" style="display:inline;">
+            <input type="hidden" name="since_date" value="{{ since_date | default('', true) }}">
+            <input type="hidden" name="sort" value="{{ sort | default('date_added', true) }}">
+            <input type="hidden" name="order" value="{{ order | default('desc', true) }}">
+            <input type="hidden" name="hide_processed" value="{{ '1' if hide_processed else '' }}">
+            <input type="hidden" name="show_changed" value="{{ '' if show_changed else '1' }}">
+            <button type="submit" class="btn btn-sm {% if show_changed %}btn-active{% endif %}">
+                {% if show_changed %}Show All{% else %}Show Changed Only{% endif %}
             </button>
         </form>
     </div>
