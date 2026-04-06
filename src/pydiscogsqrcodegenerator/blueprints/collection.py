@@ -464,15 +464,20 @@ def _get_processed_ids() -> set[int]:
 
 
 def _get_processed_at_map() -> dict[int, str]:
-    """Get mapping of release ID to formatted processed_at timestamp."""
+    """Get mapping of release ID to formatted processed_at timestamp in local time."""
     rows = ProcessedRelease.query.with_entities(
         ProcessedRelease.discogs_release_id, ProcessedRelease.processed_at
     ).all()
-    return {
-        r.discogs_release_id: r.processed_at.strftime("%Y-%m-%d %H:%M")
-        if r.processed_at else ""
-        for r in rows
-    }
+    result = {}
+    for r in rows:
+        if r.processed_at:
+            # Stored as UTC — convert to local time for display
+            utc_dt = r.processed_at.replace(tzinfo=timezone.utc)
+            local_dt = utc_dt.astimezone()
+            result[r.discogs_release_id] = local_dt.strftime("%Y-%m-%d %H:%M")
+        else:
+            result[r.discogs_release_id] = ""
+    return result
 
 
 def _get_change_details(releases: list[dict]) -> dict[int, list[str]]:
