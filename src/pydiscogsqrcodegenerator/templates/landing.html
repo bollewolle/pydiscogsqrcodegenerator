@@ -23,6 +23,20 @@
                 <h2>Latest Additions</h2>
                 <p>Find releases recently added to your collection and generate QR codes for them.</p>
             </a>
+
+            <a href="{{ url_for('collection.changed_releases') }}" class="option-card">
+                <h2>Changed Releases</h2>
+                <p>
+                    {% if has_changes_count > 0 %}
+                        {{ has_changes_count }} release(s) have changed since they were last processed.
+                    {% else %}
+                        View releases that have changed since they were last processed and need reprinting.
+                    {% endif %}
+                </p>
+                {% if has_changes_count > 0 %}
+                    <span class="badge badge-changed">{{ has_changes_count }} changed</span>
+                {% endif %}
+            </a>
         </div>
     {% else %}
         <div class="auth-prompt">

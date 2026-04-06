@@ -258,6 +258,11 @@ a:hover {
     color: #065f46;
 }
 
+.badge-changed {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .badge-experimental {
     background: #fef3c7;
     color: #92400e;

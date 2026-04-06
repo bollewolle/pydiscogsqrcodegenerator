@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 from flask import (
     Blueprint,
@@ -153,6 +154,7 @@ def mark_processed():
 
     username = session.get("username", "")
     count = 0
+    updated = 0
     for release in releases:
         folder_name = release.get("discogs_folder", "")
         existing = ProcessedRelease.query.filter_by(
@@ -165,16 +167,32 @@ def mark_processed():
                 title=release.get("title", ""),
                 year=release.get("year"),
                 folder_name=folder_name,
+                format_name=release.get("format_name", ""),
+                format_size=release.get("format_size", ""),
+                format_descriptions=release.get("format_descriptions", ""),
                 username=username,
             )
             db.session.add(processed)
             count += 1
-        elif folder_name and existing.folder_name != folder_name:
-            # Fix folder name if it was previously stored incorrectly
+        else:
+            # Update all tracked fields so re-processing clears "changed" state
+            existing.artist = release.get("artist", "")
+            existing.title = release.get("title", "")
+            existing.year = release.get("year")
             existing.folder_name = folder_name
+            existing.format_name = release.get("format_name", "")
+            existing.format_size = release.get("format_size", "")
+            existing.format_descriptions = release.get("format_descriptions", "")
+            existing.processed_at = datetime.now(timezone.utc)
+            updated += 1
 
     db.session.commit()
-    flash(f"Marked {count} release(s) as processed.", "success")
+    parts = []
+    if count:
+        parts.append(f"Marked {count} release(s) as processed.")
+    if updated:
+        parts.append(f"Updated {updated} release(s).")
+    flash(" ".join(parts) or "No changes made.", "success")
     return redirect(url_for("collection.landing"))
 
 

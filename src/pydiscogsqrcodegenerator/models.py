@@ -33,6 +33,9 @@ class ProcessedRelease(db.Model):
     title = db.Column(db.String(255), nullable=False)
     year = db.Column(db.Integer, nullable=True)
     folder_name = db.Column(db.String(255), nullable=True)
+    format_name = db.Column(db.String(255), nullable=True)
+    format_size = db.Column(db.String(255), nullable=True)
+    format_descriptions = db.Column(db.String(512), nullable=True)
     processed_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )

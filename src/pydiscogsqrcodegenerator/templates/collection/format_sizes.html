@@ -19,6 +19,7 @@
         <a href="{{ url_for('collection.format_releases', name=format_name, size=item.size) }}" class="folder-card">
             <h3>{{ item.size }}</h3>
             <span class="badge">{{ item.count }} releases</span>
+            {% if item.has_changes %}<span class="badge badge-changed">Has Changes</span>{% endif %}
         </a>
     {% endfor %}
 </div>

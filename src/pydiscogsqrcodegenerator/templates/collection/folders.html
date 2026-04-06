@@ -16,6 +16,7 @@
             <h3>{{ folder.name }}</h3>
             <span class="badge">{{ folder.count }} releases</span>
             {% if folder.fully_processed %}<span class="badge badge-processed">Fully Processed</span>{% endif %}
+            {% if folder.has_changes %}<span class="badge badge-changed">Has Changes</span>{% endif %}
         </a>
     {% endfor %}
 </div>

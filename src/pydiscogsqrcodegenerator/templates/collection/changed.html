@@ -1,51 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}Releases{% endblock %}
+{% block title %}Changed Releases{% endblock %}
 
 {% block content %}
-<h1>Releases</h1>
+<h1>Changed Releases</h1>
 {% set breadcrumbs = [
     {"label": "Home", "url": url_for('collection.landing')},
-    {"label": "Folders", "url": url_for('collection.folders')},
-    {"label": folder_name},
+    {"label": "Changed Releases"},
 ] %}
 {% include "_breadcrumbs.html" %}
 
+{% if releases | length > 0 %}
 <!-- Sort controls -->
 <div class="controls">
     <div class="sort-controls">
         <label>Sort by:</label>
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort='artist', order='asc', letter=letter, hide_processed='1' if hide_processed else '') }}"
+        <a href="{{ url_for('collection.changed_releases', sort='artist', order='asc') }}"
            class="btn btn-sm {% if sort == 'artist' and order == 'asc' %}btn-active{% endif %}">Artist A-Z</a>
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort='artist', order='desc', letter=letter, hide_processed='1' if hide_processed else '') }}"
+        <a href="{{ url_for('collection.changed_releases', sort='artist', order='desc') }}"
            class="btn btn-sm {% if sort == 'artist' and order == 'desc' %}btn-active{% endif %}">Artist Z-A</a>
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort='year', order='desc', letter=letter, hide_processed='1' if hide_processed else '') }}"
+        <a href="{{ url_for('collection.changed_releases', sort='year', order='desc') }}"
            class="btn btn-sm {% if sort == 'year' and order == 'desc' %}btn-active{% endif %}">Newest First</a>
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort='year', order='asc', letter=letter, hide_processed='1' if hide_processed else '') }}"
+        <a href="{{ url_for('collection.changed_releases', sort='year', order='asc') }}"
            class="btn btn-sm {% if sort == 'year' and order == 'asc' %}btn-active{% endif %}">Oldest First</a>
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort='date_added', order='desc', letter=letter, hide_processed='1' if hide_processed else '') }}"
-           class="btn btn-sm {% if sort == 'date_added' and order == 'desc' %}btn-active{% endif %}">Date Added</a>
     </div>
 
-    <!-- Letter filter bar -->
     {% if letters %}
     <div class="letter-bar">
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort=sort, order=order, hide_processed='1' if hide_processed else '') }}"
+        <a href="{{ url_for('collection.changed_releases', sort=sort, order=order) }}"
            class="btn btn-sm {% if not letter %}btn-active{% endif %}">All</a>
         {% for l in letters %}
-            <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort=sort, order=order, letter=l, hide_processed='1' if hide_processed else '') }}"
+            <a href="{{ url_for('collection.changed_releases', sort=sort, order=order, letter=l) }}"
                class="btn btn-sm {% if letter == l %}btn-active{% endif %}">{{ l }}</a>
         {% endfor %}
     </div>
     {% endif %}
-
-    <!-- Hide processed toggle -->
-    <div class="filter-controls">
-        <a href="{{ url_for('collection.folder_releases', folder_id=folder_id, sort=sort, order=order, letter=letter, hide_processed='' if hide_processed else '1') }}"
-           class="btn btn-sm {% if hide_processed %}btn-active{% endif %}">
-            {% if hide_processed %}Show All{% else %}Hide Processed{% endif %}
-        </a>
-    </div>
 </div>
 
 <form id="releases-form" method="post" action="{{ url_for('export.preview') }}">
@@ -53,8 +42,7 @@
     <input type="hidden" name="breadcrumbs" id="breadcrumbs-data"
            value='{{ [
                {"label": "Home", "url": url_for("collection.landing")},
-               {"label": "Folders", "url": url_for("collection.folders")},
-               {"label": folder_name, "url": url_for("collection.folder_releases", folder_id=folder_id)},
+               {"label": "Changed Releases", "url": url_for("collection.changed_releases")},
            ] | tojson }}'>
 
     <div class="selection-controls">
@@ -82,19 +70,15 @@
                     <input type="checkbox" class="release-check"
                            value="{{ release.id }}"
                            data-release='{{ release | tojson }}'
-                           {% if release.id in processed_ids %}data-processed="true"{% endif %}>
+                           data-processed="true">
                 </td>
                 <td>{{ release.artist }}</td>
                 <td><a href="{{ release.url }}" target="_blank">{{ release.title }}</a></td>
                 <td>{{ release.year }}</td>
                 <td>{{ release.discogs_folder }}</td>
                 <td>
-                    {% if release.id in processed_ids %}
-                        <span class="badge badge-processed">Processed</span>
-                    {% endif %}
-                    {% if release.id in changed_ids %}
-                        <span class="badge badge-changed">Changed</span>
-                    {% endif %}
+                    <span class="badge badge-processed">Processed</span>
+                    <span class="badge badge-changed">Changed</span>
                 </td>
                 <td>{{ processed_at_map.get(release.id, '') }}</td>
             </tr>
@@ -110,4 +94,7 @@
                 data-action="{{ url_for('export.unmark_processed') }}">Unmark Processed</button>
     </div>
 </form>
+{% else %}
+<p class="empty-state">No releases have changed since they were last processed.</p>
+{% endif %}
 {% endblock %}

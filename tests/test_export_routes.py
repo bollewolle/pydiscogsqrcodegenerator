@@ -89,19 +89,23 @@ class TestMarkProcessed:
         count = ProcessedRelease.query.count()
         assert count == 3
 
-    def test_mark_processed_skips_duplicates(self, client, db, sample_releases):
+    def test_mark_processed_updates_duplicates(self, client, db, sample_releases):
         # First mark
         client.post(
             "/export/mark-processed",
             data={"releases_data": json.dumps(sample_releases)},
         )
-        # Second mark (same releases)
+        # Second mark (same releases) — updates existing records
         response = client.post(
             "/export/mark-processed",
             data={"releases_data": json.dumps(sample_releases)},
             follow_redirects=True,
         )
-        assert b"Marked 0 release(s) as processed" in response.data
+        assert b"Updated 3 release(s)" in response.data
+
+        # Still only 3 records in DB (not 6)
+        count = ProcessedRelease.query.count()
+        assert count == 3
 
 
 class TestUnmarkProcessed:
@@ -139,6 +143,50 @@ class TestUnmarkProcessed:
             follow_redirects=True,
         )
         assert b"No releases selected" in response.data
+
+
+class TestMarkProcessedStoresAllFields:
+    def test_stores_format_fields(self, client, db, sample_releases):
+        client.post(
+            "/export/mark-processed",
+            data={"releases_data": json.dumps(sample_releases)},
+        )
+        record = ProcessedRelease.query.filter_by(
+            discogs_release_id=35410036
+        ).first()
+        assert record.format_name == "Vinyl"
+        assert record.format_size == '12"'
+        assert record.format_descriptions == "LP, Album"
+        assert record.folder_name == 'Vinyl - 12" - Albums'
+
+    def test_updates_all_fields_on_reprocess(self, client, db, sample_releases):
+        # First mark
+        client.post(
+            "/export/mark-processed",
+            data={"releases_data": json.dumps(sample_releases)},
+        )
+        original = ProcessedRelease.query.filter_by(
+            discogs_release_id=35410036
+        ).first()
+        original_time = original.processed_at
+
+        # Change release data and re-mark
+        modified = [sample_releases[0].copy()]
+        modified[0]["artist"] = "SOHN (New Name)"
+        modified[0]["title"] = "Albadas (Deluxe)"
+        modified[0]["format_descriptions"] = "LP, Album, Deluxe Edition"
+
+        client.post(
+            "/export/mark-processed",
+            data={"releases_data": json.dumps(modified)},
+        )
+        updated = ProcessedRelease.query.filter_by(
+            discogs_release_id=35410036
+        ).first()
+        assert updated.artist == "SOHN (New Name)"
+        assert updated.title == "Albadas (Deluxe)"
+        assert updated.format_descriptions == "LP, Album, Deluxe Edition"
+        assert updated.processed_at >= original_time
 
 
 class TestClearSession:

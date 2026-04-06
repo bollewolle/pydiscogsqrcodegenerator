@@ -94,6 +94,7 @@
                 <th>Year</th>
                 <th>Folder</th>
                 <th>Status</th>
+                <th>Processed At</th>
             </tr>
         </thead>
         <tbody>
@@ -113,7 +114,11 @@
                     {% if release.id in processed_ids %}
                         <span class="badge badge-processed">Processed</span>
                     {% endif %}
+                    {% if release.id in changed_ids %}
+                        <span class="badge badge-changed">Changed</span>
+                    {% endif %}
                 </td>
+                <td>{{ processed_at_map.get(release.id, '') }}</td>
             </tr>
             {% endfor %}
         </tbody>

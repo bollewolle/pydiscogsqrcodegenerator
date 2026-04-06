@@ -23,8 +23,19 @@ def landing():
     """Landing page with authentication status and navigation options."""
     authenticated = bool(session.get("username"))
     username = session.get("username", "")
+    has_changes_count = 0
+    if authenticated:
+        service = get_authenticated_service()
+        if service:
+            # Only compute when cache is warm (no extra API calls)
+            cached_ids = service.get_cached_folder_release_ids(username, 0)
+            if cached_ids is not None:
+                items = service._get_cached_items(username, 0)
+                releases = [item["release"] for item in items]
+                has_changes_count = len(_get_changed_ids(releases))
     return render_template(
-        "landing.html", authenticated=authenticated, username=username
+        "landing.html", authenticated=authenticated, username=username,
+        has_changes_count=has_changes_count,
     )
 
 
@@ -43,22 +54,29 @@ def folders():
         flash(f"Failed to retrieve folders: {e}", "error")
         return redirect(url_for("collection.landing"))
 
-    # Determine which folders are fully processed
+    # Determine which folders are fully processed and have changes
     processed_ids = _get_processed_ids()
     all_others_processed = True
+    any_others_changed = False
     for folder in folder_list:
         if folder["name"] == "All":
             continue
         folder["fully_processed"] = _is_folder_fully_processed(
             service, username, folder, processed_ids,
         )
+        folder["has_changes"] = _folder_has_changes(
+            service, username, folder,
+        )
         if not folder["fully_processed"]:
             all_others_processed = False
+        if folder["has_changes"]:
+            any_others_changed = True
 
     # "All" folder is fully processed when every other folder is
     for folder in folder_list:
         if folder["name"] == "All":
             folder["fully_processed"] = folder["count"] > 0 and all_others_processed
+            folder["has_changes"] = any_others_changed
 
     return render_template("collection/folders.html", folders=folder_list)
 
@@ -93,8 +111,10 @@ def folder_releases(folder_id: int):
             r for r in releases if r["artist"].upper().startswith(letter.upper())
         ]
 
-    # Get processed release IDs
+    # Get processed release IDs and change detection
     processed_ids = _get_processed_ids()
+    changed_ids = _get_changed_ids(releases)
+    processed_at_map = _get_processed_at_map()
 
     # Filter out processed releases if requested
     if hide_processed:
@@ -113,6 +133,8 @@ def folder_releases(folder_id: int):
         letter=letter,
         letters=letters,
         processed_ids=processed_ids,
+        changed_ids=changed_ids,
+        processed_at_map=processed_at_map,
         hide_processed=hide_processed,
     )
 
@@ -152,6 +174,8 @@ def latest():
     releases = _sort_releases(releases, sort, order)
 
     processed_ids = _get_processed_ids()
+    changed_ids = _get_changed_ids(releases)
+    processed_at_map = _get_processed_at_map()
 
     # Filter out processed releases if requested
     if hide_processed:
@@ -168,6 +192,56 @@ def latest():
         hide_processed=hide_processed,
         letters=letters,
         processed_ids=processed_ids,
+        changed_ids=changed_ids,
+        processed_at_map=processed_at_map,
+    )
+
+
+@collection_bp.route("/collection/changed")
+def changed_releases():
+    """Show processed releases that have changed since processing."""
+    service = get_authenticated_service()
+    if not service:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("auth.login"))
+
+    username = session["username"]
+    sort = request.args.get("sort", "artist")
+    order = request.args.get("order", "asc")
+    letter = request.args.get("letter", "")
+
+    try:
+        releases = service.get_folder_releases(username, 0, sort, order)
+    except Exception as e:
+        flash(f"Failed to retrieve releases: {e}", "error")
+        return redirect(url_for("collection.landing"))
+
+    changed_ids = _get_changed_ids(releases)
+    processed_ids = _get_processed_ids()
+    processed_at_map = _get_processed_at_map()
+
+    # Filter to only changed releases
+    releases = [r for r in releases if r["id"] in changed_ids]
+    releases = _sort_releases(releases, sort, order)
+
+    # Filter by starting letter if specified
+    if letter:
+        releases = [
+            r for r in releases if r["artist"].upper().startswith(letter.upper())
+        ]
+
+    letters = sorted({r["artist"][0].upper() for r in releases if r["artist"]})
+
+    return render_template(
+        "collection/changed.html",
+        releases=releases,
+        sort=sort,
+        order=order,
+        letter=letter,
+        letters=letters,
+        processed_ids=processed_ids,
+        changed_ids=changed_ids,
+        processed_at_map=processed_at_map,
     )
 
 
@@ -185,6 +259,26 @@ def formats():
     except Exception as e:
         flash(f"Failed to retrieve formats: {e}", "error")
         return redirect(url_for("collection.landing"))
+
+    # Determine which formats have changed releases
+    try:
+        items = service._get_cached_items(username, 0)
+        all_releases = [item["release"] for item in items]
+        all_changed_ids = _get_changed_ids(all_releases)
+
+        # Build format_name -> set of release IDs
+        format_release_ids: dict[str, set[int]] = {}
+        for item in items:
+            for fmt in item["formats"]:
+                fname = fmt.get("name", "Unknown")
+                format_release_ids.setdefault(fname, set()).add(item["release"]["id"])
+
+        for fmt in format_list:
+            rids = format_release_ids.get(fmt["name"], set())
+            fmt["has_changes"] = bool(rids & all_changed_ids)
+    except Exception:
+        for fmt in format_list:
+            fmt["has_changes"] = False
 
     return render_template("collection/formats.html", formats=format_list)
 
@@ -211,6 +305,31 @@ def format_sizes():
 
     if not sizes:
         return redirect(url_for("collection.format_releases", name=format_name))
+
+    # Determine which sizes have changed releases
+    try:
+        items = service._get_cached_items(username, 0)
+        all_releases = [item["release"] for item in items]
+        all_changed_ids = _get_changed_ids(all_releases)
+
+        # Build size -> set of release IDs for this format
+        size_release_ids: dict[str, set[int]] = {}
+        for item in items:
+            for fmt in item["formats"]:
+                if fmt.get("name") != format_name:
+                    continue
+                descs = fmt.get("descriptions", [])
+                from ..discogs_service import DiscogsService
+                inferred = DiscogsService._infer_size(descs)
+                size_key = inferred or "Unknown"
+                size_release_ids.setdefault(size_key, set()).add(item["release"]["id"])
+
+        for size_item in sizes:
+            rids = size_release_ids.get(size_item["size"], set())
+            size_item["has_changes"] = bool(rids & all_changed_ids)
+    except Exception:
+        for size_item in sizes:
+            size_item["has_changes"] = False
 
     return render_template(
         "collection/format_sizes.html",
@@ -250,6 +369,8 @@ def format_releases():
     releases = _sort_releases(releases, sort, order)
 
     processed_ids = _get_processed_ids()
+    changed_ids = _get_changed_ids(releases)
+    processed_at_map = _get_processed_at_map()
 
     if hide_processed:
         releases = [r for r in releases if r["id"] not in processed_ids]
@@ -274,6 +395,8 @@ def format_releases():
         order=order,
         letters=letters,
         processed_ids=processed_ids,
+        changed_ids=changed_ids,
+        processed_at_map=processed_at_map,
         hide_processed=hide_processed,
     )
 
@@ -284,6 +407,83 @@ def _get_processed_ids() -> set[int]:
         ProcessedRelease.discogs_release_id
     ).all()
     return {p.discogs_release_id for p in processed}
+
+
+def _get_processed_at_map() -> dict[int, str]:
+    """Get mapping of release ID to formatted processed_at timestamp."""
+    rows = ProcessedRelease.query.with_entities(
+        ProcessedRelease.discogs_release_id, ProcessedRelease.processed_at
+    ).all()
+    return {
+        r.discogs_release_id: r.processed_at.strftime("%Y-%m-%d %H:%M")
+        if r.processed_at else ""
+        for r in rows
+    }
+
+
+def _get_changed_ids(releases: list[dict]) -> set[int]:
+    """Compare current release data against stored processed data.
+
+    Returns set of discogs_release_ids where current data differs from stored snapshot.
+    """
+    release_ids = [r["id"] for r in releases]
+    if not release_ids:
+        return set()
+
+    processed_map = {
+        p.discogs_release_id: p
+        for p in ProcessedRelease.query.filter(
+            ProcessedRelease.discogs_release_id.in_(release_ids)
+        ).all()
+    }
+
+    changed = set()
+    for release in releases:
+        rid = release["id"]
+        stored = processed_map.get(rid)
+        if not stored:
+            continue  # Not processed yet — not "changed"
+
+        # Compare each field, but only if the stored value is not NULL.
+        # NULL means the field was not tracked when the release was processed,
+        # so we can't know if it changed — don't flag it.
+        checks = [
+            (stored.artist, release.get("artist", "")),
+            (stored.title, release.get("title", "")),
+            (stored.year, release.get("year") or 0),
+            (stored.folder_name, release.get("discogs_folder", "")),
+            (stored.format_name, release.get("format_name", "")),
+            (stored.format_size, release.get("format_size", "")),
+            (stored.format_descriptions, release.get("format_descriptions", "")),
+        ]
+        for stored_val, current_val in checks:
+            if stored_val is None:
+                continue  # Never recorded — skip
+            if stored_val != current_val:
+                # Handle year: stored 0 vs current 0 shouldn't differ
+                if isinstance(current_val, int) and (stored_val or 0) != (current_val or 0):
+                    changed.add(rid)
+                    break
+                elif not isinstance(current_val, int) and stored_val != current_val:
+                    changed.add(rid)
+                    break
+
+    return changed
+
+
+def _folder_has_changes(service, username, folder) -> bool:
+    """Check if any release in a folder has changed since processing.
+
+    Only uses cached data — returns False if cache is cold to avoid API calls.
+    """
+    if folder["count"] == 0:
+        return False
+    cached_ids = service.get_cached_folder_release_ids(username, folder["id"])
+    if cached_ids is None:
+        return False
+    items = service._get_cached_items(username, folder["id"])
+    releases = [item["release"] for item in items]
+    return len(_get_changed_ids(releases)) > 0
 
 
 def _is_folder_fully_processed(service, username, folder, processed_ids) -> bool:

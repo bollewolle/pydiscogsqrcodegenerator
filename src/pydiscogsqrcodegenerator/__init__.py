@@ -103,6 +103,9 @@ def _migrate_schema(database):
     migrations = [
         ("user_settings", "printer_offset_top", "FLOAT NOT NULL DEFAULT 0.0"),
         ("user_settings", "printer_offset_left", "FLOAT NOT NULL DEFAULT 0.0"),
+        ("processed_release", "format_name", "VARCHAR(255)"),
+        ("processed_release", "format_size", "VARCHAR(255)"),
+        ("processed_release", "format_descriptions", "VARCHAR(512)"),
     ]
     for table, column, col_type in migrations:
         try:
