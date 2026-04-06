@@ -13,25 +13,35 @@ from .csv_service import CSVService
 class PDFService:
     """Generate sticker-sheet PDFs with QR codes, logo overlay, and BottomText."""
 
-    # Characters that can't be encoded in latin-1 (used by fpdf core fonts)
-    _UNICODE_REPLACEMENTS = {
-        "\u2013": "-",  # en-dash
-        "\u2014": "-",  # em-dash
-        "\u2018": "'",  # left single quote
-        "\u2019": "'",  # right single quote
-        "\u201c": '"',  # left double quote
-        "\u201d": '"',  # right double quote
-        "\u2026": "...",  # ellipsis
-        "\u2153": "1/3",  # ⅓
-        "\u2154": "2/3",  # ⅔
-        "\u2155": "1/5",  # ⅕
-        "\u2159": "1/6",  # ⅙
-        "\u215b": "1/8",  # ⅛
-    }
+    # Noto Sans font files for full Unicode support
+    _FONTS_DIR = Path(__file__).parent / "static" / "fonts"
+    _FONT_FAMILY = "NotoSans"
+    _FALLBACK_FONTS = [
+        ("NotoDevanagari", "NotoSansDevanagari.ttf"),
+        ("NotoArabic", "NotoSansArabic.ttf"),
+        ("NotoHebrew", "NotoSansHebrew.ttf"),
+        ("NotoThai", "NotoSansThai.ttf"),
+        ("NotoJP", "NotoSansJP.ttf"),
+    ]
 
     def __init__(self, logo_path: str | Path, csv_template_path: str | Path):
         self.logo_path = Path(logo_path)
         self.csv_service = CSVService(csv_template_path)
+
+    def _register_fonts(self, pdf: FPDF) -> None:
+        """Register Unicode TTF fonts and set up fallback chain."""
+        pdf.add_font(self._FONT_FAMILY, fname=str(self._FONTS_DIR / "NotoSans.ttf"))
+        pdf.add_font(self._FONT_FAMILY, style="B", fname=str(self._FONTS_DIR / "NotoSans-Bold.ttf"))
+
+        fallback_names = []
+        for name, filename in self._FALLBACK_FONTS:
+            font_path = self._FONTS_DIR / filename
+            if font_path.exists():
+                pdf.add_font(name, fname=str(font_path))
+                fallback_names.append(name)
+
+        if fallback_names:
+            pdf.set_fallback_fonts(fallback_names, exact_match=False)
 
     def generate_qr_with_logo(self, url: str, size_px: int = 400) -> Image.Image:
         """Generate a QR code PNG with the Discogs logo centered on it."""
@@ -131,6 +141,7 @@ class PDFService:
         pdf = FPDF(unit="mm", format=(page_w, page_h))
         pdf.set_auto_page_break(auto=False)
         pdf.viewer_preferences = ViewerPreferences(print_scaling="None")
+        self._register_fonts(pdf)
 
         padding_top = 1  # mm padding from top of sticker
         padding_bottom = 3.5  # mm padding at bottom of sticker
@@ -232,14 +243,6 @@ class PDFService:
 
         return pdf.output()
 
-    @classmethod
-    def _sanitize_text(cls, text: str) -> str:
-        """Replace Unicode characters that aren't supported by fpdf core fonts."""
-        for char, replacement in cls._UNICODE_REPLACEMENTS.items():
-            text = text.replace(char, replacement)
-        # Remove any remaining non-latin-1 characters
-        return text.encode("latin-1", errors="replace").decode("latin-1")
-
     # Font sizes to try, from largest to smallest
     _FONT_SIZES = [10, 9, 8, 7, 6, 5, 4, 3]
 
@@ -294,12 +297,11 @@ class PDFService:
             qr_size = min(usable_w, usable_h * self._QR_BASELINE)
             return {"qr_size": qr_size, "font_size": 8, "lines": []}
 
-        text = self._sanitize_text(text)
         text_h_baseline = usable_h * (1 - self._QR_BASELINE) - gap
         text_h_max = usable_h * (1 - self._QR_MIN) - gap
 
         for font_size in self._FONT_SIZES:
-            pdf.set_font("Helvetica", style="B", size=font_size)
+            pdf.set_font(self._FONT_FAMILY, style="B", size=font_size)
             wrapped = self._wrap_text(pdf, text, usable_w)
             line_h = font_size * 0.45
             total_h = len(wrapped) * line_h
@@ -328,7 +330,7 @@ class PDFService:
 
         # Final fallback: smallest font, QR at 62%
         font_size = self._FONT_SIZES[-1]
-        pdf.set_font("Helvetica", style="B", size=font_size)
+        pdf.set_font(self._FONT_FAMILY, style="B", size=font_size)
         wrapped = self._wrap_text(pdf, text, usable_w)
         qr_size = min(usable_w, usable_h * self._QR_MIN)
         return {"qr_size": qr_size, "font_size": font_size, "lines": wrapped}
@@ -347,7 +349,7 @@ class PDFService:
         if not lines:
             return
 
-        pdf.set_font("Helvetica", style="B", size=font_size)
+        pdf.set_font(self._FONT_FAMILY, style="B", size=font_size)
         line_h = font_size * 0.45
         total_h = len(lines) * line_h
         start_y = y + (max_h - total_h) / 2
@@ -355,7 +357,9 @@ class PDFService:
         for i, line in enumerate(lines):
             w = pdf.get_string_width(line)
             text_x = x + (max_w - w) / 2
-            pdf.text(text_x, start_y + (i + 1) * line_h, line)
+            line_y = start_y + i * line_h
+            pdf.set_xy(text_x, line_y)
+            pdf.cell(w=w, h=line_h, text=line)
 
     def _empty_pdf(self, layout: dict) -> bytes:
         """Return a single-page empty PDF."""
