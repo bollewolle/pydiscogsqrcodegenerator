@@ -17,9 +17,10 @@ A web application that connects to the Discogs API to retrieve your record colle
 - **Sticker Slot Activation** — Deactivate individual sticker slots to reuse partially printed pages
 - **QR Factory 3 CSV Export** — Generate CSV files in the exact format expected by QR Factory 3, with preview and edit before downloading
 - **Customizable Text below QR Code** — Configure what text appears below the QR code via the Settings page, using any combination of artist, title, year, folder, format, size, and description
-- **Processing Tracker** — Keeps track of releases already processed to avoid duplicates; folders where all releases are processed show a "Fully Processed" badge
+- **Processing Tracker** — Keeps track of releases already processed to avoid duplicates; folders where all releases are processed show a "Fully Processed" badge; shows when each release was processed
+- **Change Detection** — Detects when a release has changed on Discogs since it was last processed (artist, title, year, folder, format, etc.) and shows a "Changed" badge with a tooltip detailing exactly what changed; available as a filter on all release listing pages and as a dedicated "Changed Releases" view from the home page
 - **Breadcrumb Navigation** — Easy navigation throughout the app
-- **Collection Caching** — API results are cached for 5 minutes to speed up browsing
+- **Collection Caching** — API results are cached for 5 minutes to speed up browsing; release listing pages show when data was last refreshed with a manual refresh button
 
 ## Prerequisites
 
@@ -76,9 +77,9 @@ The app will be available at `http://localhost:5000`.
 
 1. **Login** — Click "Login with Discogs" to authenticate via OAuth, or the app will auto-authenticate if credentials are configured in `.env`.
 
-2. **Browse** — Choose between "Browse by Folders" to navigate by folder, "Browse by Format" to navigate by format and size, or "Latest Additions" to find recently added releases.
+2. **Browse** — Choose between "Browse by Folders" to navigate by folder, "Browse by Format" to navigate by format and size, "Latest Additions" to find recently added releases, or "Changed Releases" to see releases that have changed since they were last processed.
 
-3. **Select** — Use checkboxes to select individual releases, or use "Select All" / letter filters. Releases previously processed are marked with a "Processed" badge.
+3. **Select** — Use checkboxes to select individual releases, or use "Select All" / letter filters. Releases previously processed are marked with a "Processed" badge. Releases that have changed since processing show a "Changed" badge — hover over it to see what changed. Use "Hide Processed" or "Show Changed Only" to filter the list.
 
 4. **Settings (optional)** — Click "Settings" in the navbar to customize the text template below the QR code, manage sticker layouts, select the active layout, and configure printer offset correction.
 
@@ -238,7 +239,7 @@ src/pydiscogsqrcodegenerator/
 ├── __init__.py            # App factory
 ├── config.py              # Configuration classes
 ├── extensions.py          # Flask extensions
-├── models.py              # Database models (UserSettings, StickerLayout, ProcessedRelease)
+├── models.py              # Database models (UserSettings, StickerLayout, ProcessedRelease, OAuthToken)
 ├── discogs_service.py     # Discogs API wrapper
 ├── csv_service.py         # QR Factory 3 CSV generation service
 ├── pdf_service.py         # QR code PDF sticker sheet generation
