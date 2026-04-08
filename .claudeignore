@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+
+# Instance data (SQLite DB, sessions)
+instance/
+
+# Build/cache artifacts
+.pytest_cache/
+.coverage
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Font files (binary, not useful to read)
+src/pydiscogsqrcodegenerator/static/fonts/*.ttf
+src/pydiscogstoqrfactory/static/fonts/*.ttf
+
+# Media assets
+media/
+
+# Lock file (large, auto-generated)
+uv.lock
+
+# OS files
+.DS_Store
+
+# Git internals
+.git/
