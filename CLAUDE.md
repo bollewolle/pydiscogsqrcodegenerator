@@ -31,7 +31,7 @@ docker compose up
 
 ## Architecture
 
-**Package**: `src/pydiscogsqrcodegenerator/` — the active package (built via hatch). There is also `src/pydiscogstoqrfactory/` which is a copy/older name; the wheel only includes `pydiscogsqrcodegenerator`.
+**Package**: `src/pydiscogsqrcodegenerator/` — the active package (built via hatch).
 
 **App factory**: `__init__.py` → `create_app()` creates the Flask app, initializes SQLAlchemy + Flask-Session, registers blueprints, and runs lightweight schema migrations on startup.
 

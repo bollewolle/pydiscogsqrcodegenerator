@@ -14,7 +14,6 @@ build/
 
 # Font files (binary, not useful to read)
 src/pydiscogsqrcodegenerator/static/fonts/*.ttf
-src/pydiscogstoqrfactory/static/fonts/*.ttf
 
 # Media assets
 media/
