@@ -242,15 +242,32 @@ def changed_releases():
     # Filter to only changed releases, deduplicating by release id
     # (a single release can appear multiple times in folder 0 if the user
     # owns multiple copies — each copy is a separate collection instance).
-    seen_ids: set[int] = set()
-    deduped: list[dict] = []
+    # When copies exist, prefer the copy whose current data actually differs
+    # from the stored snapshot, so the card (and the PDF/CSV preview payload
+    # built from it) reflect the changed values rather than an unchanged sibling.
+    processed_map = {
+        p.discogs_release_id: p
+        for p in ProcessedRelease.query.filter(
+            ProcessedRelease.discogs_release_id.in_(list(change_details.keys()))
+        ).all()
+    }
+    picked: dict[int, dict] = {}
+    fallback: dict[int, dict] = {}
+    order_ids: list[int] = []
     for r in releases:
-        if r["id"] not in change_details:
+        rid = r["id"]
+        if rid not in change_details:
             continue
-        if r["id"] in seen_ids:
+        if rid not in picked and rid not in fallback:
+            order_ids.append(rid)
+        if rid in picked:
             continue
-        seen_ids.add(r["id"])
-        deduped.append(r)
+        stored = processed_map.get(rid)
+        if stored and _compute_release_diffs(r, stored):
+            picked[rid] = r
+        elif rid not in fallback:
+            fallback[rid] = r
+    deduped = [picked[rid] if rid in picked else fallback[rid] for rid in order_ids]
     releases = _sort_releases(deduped, sort, order)
 
     # Filter by starting letter if specified
@@ -492,6 +509,43 @@ def _get_processed_at_map() -> dict[int, str]:
     return result
 
 
+# Field label, stored attribute, release dict key
+_CHANGE_FIELD_CHECKS = [
+    ("Artist", "artist", "artist"),
+    ("Title", "title", "title"),
+    ("Year", "year", "year"),
+    ("Folder", "folder_name", "discogs_folder"),
+    ("Format", "format_name", "format_name"),
+    ("Size", "format_size", "format_size"),
+    ("Description", "format_descriptions", "format_descriptions"),
+]
+
+
+def _compute_release_diffs(release: dict, stored: ProcessedRelease) -> list[str]:
+    """Compare a single release against its stored snapshot.
+
+    Returns a list of human-readable diff strings (empty if unchanged).
+    """
+    diffs = []
+    for label, attr, key in _CHANGE_FIELD_CHECKS:
+        stored_val = getattr(stored, attr)
+        if stored_val is None:
+            continue  # Never recorded — skip
+
+        current_val = release.get(key, 0 if key == "year" else "")
+        if key == "year":
+            current_val = current_val or 0
+            stored_cmp = stored_val or 0
+        else:
+            stored_cmp = stored_val
+
+        if stored_cmp != current_val:
+            old = str(stored_val) if stored_val else "(empty)"
+            new = str(current_val) if current_val else "(empty)"
+            diffs.append(f'{label}: "{old}" \u2192 "{new}"')
+    return diffs
+
+
 def _get_change_details(releases: list[dict]) -> dict[int, list[str]]:
     """Compare current release data against stored processed data.
 
@@ -510,42 +564,13 @@ def _get_change_details(releases: list[dict]) -> dict[int, list[str]]:
         ).all()
     }
 
-    # Field label, stored attribute, release dict key
-    field_checks = [
-        ("Artist", "artist", "artist"),
-        ("Title", "title", "title"),
-        ("Year", "year", "year"),
-        ("Folder", "folder_name", "discogs_folder"),
-        ("Format", "format_name", "format_name"),
-        ("Size", "format_size", "format_size"),
-        ("Description", "format_descriptions", "format_descriptions"),
-    ]
-
     result: dict[int, list[str]] = {}
     for release in releases:
         rid = release["id"]
         stored = processed_map.get(rid)
         if not stored:
             continue  # Not processed yet — not "changed"
-
-        diffs = []
-        for label, attr, key in field_checks:
-            stored_val = getattr(stored, attr)
-            if stored_val is None:
-                continue  # Never recorded — skip
-
-            current_val = release.get(key, 0 if key == "year" else "")
-            if key == "year":
-                current_val = current_val or 0
-                stored_cmp = stored_val or 0
-            else:
-                stored_cmp = stored_val
-
-            if stored_cmp != current_val:
-                old = str(stored_val) if stored_val else "(empty)"
-                new = str(current_val) if current_val else "(empty)"
-                diffs.append(f'{label}: "{old}" \u2192 "{new}"')
-
+        diffs = _compute_release_diffs(release, stored)
         if diffs:
             result[rid] = diffs
 
