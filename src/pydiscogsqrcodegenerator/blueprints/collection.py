@@ -239,9 +239,19 @@ def changed_releases():
     processed_ids = _get_processed_ids()
     processed_at_map = _get_processed_at_map()
 
-    # Filter to only changed releases
-    releases = [r for r in releases if r["id"] in change_details]
-    releases = _sort_releases(releases, sort, order)
+    # Filter to only changed releases, deduplicating by release id
+    # (a single release can appear multiple times in folder 0 if the user
+    # owns multiple copies — each copy is a separate collection instance).
+    seen_ids: set[int] = set()
+    deduped: list[dict] = []
+    for r in releases:
+        if r["id"] not in change_details:
+            continue
+        if r["id"] in seen_ids:
+            continue
+        seen_ids.add(r["id"])
+        deduped.append(r)
+    releases = _sort_releases(deduped, sort, order)
 
     # Filter by starting letter if specified
     if letter:
