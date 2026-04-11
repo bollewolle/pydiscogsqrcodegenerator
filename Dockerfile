@@ -25,4 +25,10 @@ EXPOSE 5001
 # Run with gunicorn for production
 RUN uv pip install gunicorn
 
-CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "--preload", "pydiscogsqrcodegenerator:create_app()"]
+# NOTE: single worker + no --preload is intentional. The in-process
+# APScheduler starts a background thread inside create_app(); --preload
+# would run create_app() in the gunicorn master and the scheduler thread
+# would not survive fork() into the workers. Multiple workers would also
+# each fire every scan job once. For this personal-scale app one worker
+# is plenty.
+CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:5001", "--workers", "1", "pydiscogsqrcodegenerator:create_app()"]
